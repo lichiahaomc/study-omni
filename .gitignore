@@ -29,3 +29,6 @@ thinking-state-fix.png
 .vscode/
 .DS_Store
 Thumbs.db
+
+# 提交信息草稿(避免 heredoc 引号问题,写文件后 git commit -F)
+.commitmsg.txt
