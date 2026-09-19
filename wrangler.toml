@@ -1,0 +1,5 @@
+name = "studyomni"
+compatibility_date = "2026-09-18"
+
+# 静态资源根目录。注意这里没有构建步骤 —— 源码即产物
+pages_build_output_dir = "public"

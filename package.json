@@ -1,0 +1,17 @@
+{
+  "name": "study-omni",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "StudyOmni 多模态教学智能体 · 粤港澳大湾区 AI Coding 创新大赛",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy",
+    "tail": "wrangler pages deployment tail",
+    "whoami": "wrangler whoami",
+    "test": "node tests/ratelimit.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

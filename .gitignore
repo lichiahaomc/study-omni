@@ -1,0 +1,31 @@
+# 密钥 —— 最重要的一条,一旦提交进 Git 就删不干净了
+.dev.vars
+
+# Wrangler / 依赖
+node_modules/
+.wrangler/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 历史备份,不进仓库
+.index.bak*.html
+.index.codepen-glass.html
+
+# 验证过程的中间产物(截图、最小复现页、临时脚本)
+thinking-state-fix.png
+.probe*
+.final*
+.compare*
+.chk*
+.tmp*
+.syntaxcheck.mjs
+
+# 助手的工作记忆与临时目录,属于本地工具状态,不是交付物
+.learnbuddy/
+.rltest/
+
+# 编辑器与系统
+.vscode/
+.DS_Store
+Thumbs.db

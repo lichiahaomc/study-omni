@@ -1,0 +1,21 @@
+feat: StudyOmni 首个可用版本(多模态解析 + 流式答疑 + 公式渲染)
+
+前端(public/index.html,单文件零构建)
+- 三栏液态玻璃 UI:素材上传 / 解析结果 / AI 答疑,支持暗色、六套主题色、拖拽分栏
+- 上传图片走视觉模型识别,PDF 走 pdf.js 抽文本,解析结果注入 system prompt
+  (不占 history 轮次,避免被上下文截断挤掉)
+- 流式 SSE 打字机输出;同时解析 content 与 reasoning_content,
+  并据 finish_reason 区分「被截断」「只思考没回答」「真没返回」三种失败
+- LaTeX 公式渲染:KaTeX 按需从 CDN 加载,平时零请求;
+  加载前用自带的 latexPlain() 兜底成可读文本,离线也不会看到源码
+
+服务端(functions/,Cloudflare Pages Functions)
+- 三家厂商统一走 OpenAI 兼容协议,LLM_PROVIDER 环境变量即可切换
+- 密钥只存云端 Secret,浏览器零持有;endpoint 硬编码防 SSRF
+- 29 学科 system prompt 生成器(学段语气 × 学科策略 × 具体重点)
+- token 预算分配:推理模型的思维链与正文共用 max_tokens,
+  故按「正文额度 + 6144 思考预算」下发,并夹到上游硬限 8192
+- 限流:同源校验 + 单 IP 每分钟 20 次 + 全站每日 2000 次
+
+测试
+- tests/ratelimit.test.mjs(npm test):32 项离线用例,覆盖限流与同源校验
