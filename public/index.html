@@ -2415,28 +2415,39 @@
   /* ---- 滑块 ----
      原来是"假进度":轨道用一条写死的渐变(34% 处色停),滑块拖到哪它都不动,
      看着像进度条,其实永远停在同一个位置。
-     现在拆成两层:
-       1) 底层 = 灰色底轨(::-webkit-slider-runnable-track / ::-moz-range-track)
-       2) 上层 = 进度填充,由 JS 按 --fill 画在 input 自己的背景上
-     填充必须画在 input 上、而不是伪元素里:伪元素上的 background 变化
-     不会参与 transition,做不出平滑跟手的效果。
-     Firefox 原生有 ::-moz-range-progress,不用 JS 算,但那边的填充与
-     input 背景会叠在一起,所以 Firefox 下让 --fill 保持 0 即可(见 JS)。 */
+
+     现在:底层灰色底轨 + 上层进度填充。
+     ⚠️ 填充**不能**写成 `background-size: var(--fill) 5px` ——
+     实测这样会解析成 `0px 5px`(自定义属性在多值简写里替换失败),
+     滑块拖到哪填充都不显示。改用 linear-gradient 的色停位置控制:
+     「填充色 0 → 填充色 var(--fill) → 透明 var(--fill) → 透明 100%」,
+     色停是一整条渐变里的位置,不依赖 background-size,稳得多。
+     配合 background-size: 100% 5px 只负责裁出 5px 高的一条。 */
   .range-wrap { flex-shrink: 0; width: 152px; }
   .range {
+    /* 底轨色单独一个变量:全局 --border-strong(#d1d5db)在浅色卡片上太淡,
+       滑块拖到低值时"已填充/未填充"的分界几乎看不出来。这里压深一档。 */
+    --track: #b8c0cc;
     --fill: 0px;
-    --thumb-size: 15px;   /* JS 读它来算填充宽度,别只改下面的 width */
+    --thumb-size: 15px;   /* JS 读它来算填充宽度,别只改 thumb 的 width */
     appearance: none;
     width: 100%;
     height: 22px;
     cursor: pointer;
+    /* ⚠️ 必须显式清掉 background-color。表单控件的默认背景是白色,
+       亮色下看不出来(背景本来就白),但暗色下这个白底会把整条轨道
+       铺成一根白条,把底轨和填充全盖住 —— 看起来就是"滑块变成白条"。 */
+    background-color: transparent;
+    /* 渐变的两个色停都钉在 var(--fill) 上,左半段有色、右半段透明 */
     background-image: linear-gradient(90deg,
-      rgba(var(--primary-rgb), .55) 0,
-      rgba(var(--primary-2-rgb), .42) 100%);
+      rgba(var(--primary-rgb), .92) 0,
+      rgba(var(--primary-2-rgb), .72) var(--fill),
+      rgba(var(--primary-2-rgb), 0) var(--fill),
+      rgba(var(--primary-2-rgb), 0) 100%);
     background-repeat: no-repeat;
-    background-size: var(--fill) 5px;
+    background-size: 100% 5px;
     background-position: left center;
-    transition: background-size var(--dur) var(--ease-out);
+    transition: background-image var(--dur) var(--ease-out);
   }
   /* 拖动中关掉过渡,否则拇指已经走了填充还在补间,视觉上会脱节 */
   .range.is-dragging { transition: none; }
@@ -2444,7 +2455,7 @@
   .range::-webkit-slider-runnable-track {
     height: 5px;
     border-radius: 999px;
-    background: var(--border-strong);
+    background: var(--track);
   }
   .range::-webkit-slider-thumb {
     appearance: none;
@@ -2461,13 +2472,13 @@
 
   .range::-moz-range-track {
     height: 5px; border-radius: 999px;
-    background: var(--border-strong);
+    background: var(--track);
   }
-  /* Firefox 原生支持进度段,不用 JS 算 —— 也就省掉了 input 背景那一层 */
+  /* 不能再用 ::-moz-range-progress —— input 背景上已经画了填充,
+     两边都画会叠加成双层色块。让它透明即可,填充统一由 --fill 负责。 */
   .range::-moz-range-progress {
     height: 5px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(var(--primary-rgb), .55), rgba(var(--primary-2-rgb), .42));
+    background: transparent;
   }
   .range::-moz-range-thumb {
     width: var(--thumb-size); height: var(--thumb-size);
@@ -2540,9 +2551,10 @@
   }
   [data-theme="dark"] .switch { background: rgba(148, 163, 184, .18); border-color: rgba(255, 255, 255, .18); }
   [data-theme="dark"] .switch-knob { background: #e2e8f0; }
-  [data-theme="dark"] .range::-webkit-slider-runnable-track {
-    background: linear-gradient(90deg, rgba(var(--primary-rgb), .5), rgba(var(--primary-2-rgb), .34) 62%, rgba(255, 255, 255, .18));
-  }
+  [data-theme="dark"] .range { --track: rgba(255, 255, 255, .22); }
+  /* 暗色下底轨改成半透白。注意只改 --track,
+     不要再写一条带渐变的 track 背景 —— 那是旧"假进度"的写法,
+     会把底层灰轨覆盖成写死的渐变,滑块又变成拖不动的死条。 */
   [data-theme="dark"] .range::-webkit-slider-thumb { background: #1e293b; }
   [data-theme="dark"] .about-card {
     background: rgba(var(--primary-rgb), .12);
