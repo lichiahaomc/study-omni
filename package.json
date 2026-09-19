@@ -6,7 +6,8 @@
   "description": "StudyOmni 多模态教学智能体 · 粤港澳大湾区 AI Coding 创新大赛",
   "scripts": {
     "dev": "wrangler pages dev public",
-    "deploy": "wrangler pages deploy",
+    "deploy": "wrangler pages deploy public --project-name=studyomni --commit-dirty=true",
+    "pages:create": "wrangler pages project create studyomni --production-branch=main",
     "tail": "wrangler pages deployment tail",
     "whoami": "wrangler whoami",
     "test": "node tests/ratelimit.test.mjs"
