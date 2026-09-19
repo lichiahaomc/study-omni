@@ -1550,12 +1550,28 @@
     50% { content: '..'; } 75% { content: '...'; }
   }
 
+  /* 建议芯片:固定排成一行。
+     原来是 flex-wrap: wrap —— 右栏默认 400px 时,四枚芯片的总宽刚好卡在临界点上,
+     稍微一超(换个字号、紧凑密度、窄一点的栏)就会掉成两行,"参数变化"被挤到下面。
+     现在改成 nowrap + 横向滚动兜底,并把内边距收一点给出让位空间:
+     正常字号下四条完整显示、不会触发滚动。
+     上下留白比看上去需要的更多,是为了不裁掉悬停时的抬升与外发光
+     (overflow-x 一旦不是 visible,另一轴会被强制成 auto 并产生裁切)。 */
   .suggestions {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    padding: 0 20px 12px;
+    display: flex; flex-wrap: nowrap; gap: 6px;
+    padding: 8px 16px 12px;
+    overflow-x: auto; overflow-y: hidden;
+    overscroll-behavior-x: contain;   /* 横向滑动到头时别把整页带跑 */
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none; -ms-overflow-style: none;
   }
+  .suggestions::-webkit-scrollbar { width: 0; height: 0; display: none; }
   .suggestion-chip {
-    padding: 8px 14px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    padding: 7px 10px;
     border-radius: 999px;
     background: linear-gradient(135deg, rgba(255,255,255,.66), rgba(255,255,255,.38));
     backdrop-filter: var(--glass-blur-soft);
@@ -2509,7 +2525,8 @@
   [data-density="compact"] .panel-header { padding: 10px 16px; }
   [data-density="compact"] .panel-body { padding: 12px 16px; }
   [data-density="compact"] .chat-messages { padding: 14px 16px; gap: 11px; }
-  [data-density="compact"] .suggestions { padding: 0 16px 8px; gap: 6px; }
+  [data-density="compact"] .suggestions { padding: 6px 14px 8px; gap: 5px; }
+  [data-density="compact"] .suggestion-chip { padding: 6px 10px; }
   [data-density="compact"] .action-bar { padding: 10px 16px; }
   [data-density="compact"] .upload-zone { padding: 20px 14px; }
   [data-density="compact"] .message { gap: 8px; }
@@ -2672,7 +2689,7 @@
     }
     .panel-body { padding: 16px; }
     .chat-messages { padding: 16px; }
-    .suggestions { padding: 0 16px 10px; }
+    .suggestions { padding: 6px 12px 10px; gap: 5px; }
     .action-bar { padding: 12px 16px; }
     .panel-header { padding: 14px 16px; }
   }
@@ -2841,7 +2858,8 @@
     .chat-messages { padding: 14px; }
     .panel-header { padding: 12px 14px; }
     .action-bar { padding: 10px 12px; }
-    .suggestions { padding: 0 12px 8px; }
+    .suggestions { padding: 6px 10px 8px; gap: 5px; }
+    .suggestion-chip { padding: 7px 10px; }
     .header { padding-left: 14px; padding-right: 14px; }
   }
 
@@ -3727,8 +3745,14 @@
             <p class="about-desc">多模态教学智能体 · 粤港澳大湾区 AI Coding 创新大赛参赛项目</p>
             <div class="about-actions">
               <button type="button" class="ghost-btn" id="exportSettings">导出设置</button>
+              <button type="button" class="ghost-btn" id="importSettings">导入设置</button>
               <button type="button" class="ghost-btn danger" id="resetSettings">重置全部设置</button>
             </div>
+            <p class="about-desc" style="margin-top:8px">
+              导出会生成一个 JSON 文件;把它发给别人、或换台机器时用「导入设置」读回来即可。
+            </p>
+            <!-- 隐藏的文件选择器:点「导入设置」时程序触发,选完即弃 -->
+            <input type="file" id="importSettingsFile" accept="application/json,.json,text/plain" hidden>
           </div>
         </div>
       </section>
@@ -5529,7 +5553,7 @@ const Settings = (function () {
         apply();
       }
       if (onApply) onApply(val);
-      root.dispatchEvent(new CustomEvent('settingschange', { detail: { key, value: val, state: getState() } }));
+      root.dispatchEvent(new CustomEvent('settingschange', { bubbles: true, detail:{ key, value: val, state: getState() } }));
     });
     // 键盘:左右箭头在组内移动
     g.addEventListener('keydown', e => {
@@ -5552,7 +5576,7 @@ const Settings = (function () {
       if (out) out.textContent = typeof raw === 'number' ? (key === 'temperature' ? raw.toFixed(1) : raw) : raw;
       apply();
       saveSettings();
-      root.dispatchEvent(new CustomEvent('settingschange', { detail: { key, value: raw, state: getState() } }));
+      root.dispatchEvent(new CustomEvent('settingschange', { bubbles: true, detail:{ key, value: raw, state: getState() } }));
     });
   }
 
@@ -5563,7 +5587,7 @@ const Settings = (function () {
       state[key] = !state[key];
       apply();
       saveSettings();
-      root.dispatchEvent(new CustomEvent('settingschange', { detail: { key, value: state[key], state: getState() } }));
+      root.dispatchEvent(new CustomEvent('settingschange', { bubbles: true, detail:{ key, value: state[key], state: getState() } }));
     });
   }
 
@@ -5577,7 +5601,7 @@ const Settings = (function () {
       state[key] = btn.dataset.value;
       saveSettings();
       apply();
-      root.dispatchEvent(new CustomEvent('settingschange', { detail: { key, value: btn.dataset.value, state: getState() } }));
+      root.dispatchEvent(new CustomEvent('settingschange', { bubbles: true, detail:{ key, value: btn.dataset.value, state: getState() } }));
     });
     g.addEventListener('keydown', e => {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
@@ -5592,6 +5616,66 @@ const Settings = (function () {
   }
 
   function getState() { return Object.assign({}, state, { theme: theme }); }
+
+  /* ---- 导入:逐项校验 ----
+     外部 JSON 一律当不可信输入处理:
+       1. 只认 DEFAULTS 里声明过的键(+ 单独存的 theme),多余字段直接忽略 ——
+          万一导出的文件里混进了别的站点的键,不会被写进 localStorage。
+       2. 每个键都要过取值范围。手改坏的 JSON(比如 fontSize: 999、
+          brand: "evil")不该把页面搞成白屏,直接跳过并在结果里报告。
+       3. 数字字段可能是字符串(分段控件的 data-value 就是 "10"),
+          先按数字形态转回来再校验。 */
+  const RULES = {
+    brand:        v => BRANDS.indexOf(v) >= 0,
+    fontSize:     v => typeof v === 'number' && v >= 12 && v <= 18,
+    density:      v => v === 'comfortable' || v === 'compact',
+    motion:       v => v === 'on' || v === 'off',
+    model:        v => Object.prototype.hasOwnProperty.call(MODEL_DESC, v),
+    style:        v => v === 'concise' || v === 'balanced' || v === 'step',
+    temperature:  v => typeof v === 'number' && v >= 0 && v <= 1,
+    maxLen:       v => typeof v === 'number' && v >= 256 && v <= 8192,
+    autoParse:    v => typeof v === 'boolean',
+    latex:        v => typeof v === 'boolean',
+    maxSize:      v => v === 5 || v === 10 || v === 20,
+    col1:         v => typeof v === 'number' && v >= 220 && v <= 700,
+    col3:         v => typeof v === 'number' && v >= 220 && v <= 700
+  };
+
+  function importState(text) {
+    let obj;
+    try { obj = JSON.parse(text); } catch (e) { return null; }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+
+    const applied = [], skipped = [];
+    Object.keys(DEFAULTS).forEach(k => {
+      if (obj[k] === undefined) return;
+      let v = obj[k];
+      if (typeof DEFAULTS[k] === 'number' && typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v)) {
+        v = Number(v);
+      }
+      const ok = RULES[k] ? RULES[k](v) : typeof v === typeof DEFAULTS[k];
+      if (!ok) { skipped.push(k); return; }
+      state[k] = v;
+      applied.push(k);
+    });
+
+    // theme 不在 DEFAULTS 里(它单独存一份),单独处理
+    let themeOk = false;
+    if (obj.theme === 'light' || obj.theme === 'dark' || obj.theme === 'auto') {
+      theme = obj.theme;
+      saveTheme();
+      themeOk = true;
+    }
+
+    if (applied.length) saveSettings();
+    applyTheme();
+    apply();
+    root.dispatchEvent(new CustomEvent('settingschange', {
+      bubbles: true,
+      detail: { key: 'import', value: applied, state: getState() }
+    }));
+    return { applied: applied, skipped: skipped, theme: themeOk };
+  }
 
   function init() {
     readJSON();
@@ -5620,7 +5704,8 @@ const Settings = (function () {
   }
 
   return {
-    init, getState, apply,
+    init, getState, apply, importState,
+    defaults: function () { return Object.assign({}, DEFAULTS); },
     prefersDark,
     /* 主题统一入口。主页图标和设置面板都走这里,避免两套逻辑各改一半 */
     setTheme: function (val) {
@@ -5696,17 +5781,87 @@ const Settings = (function () {
   });
 })();
 
-/* ---- 导出 / 重置设置 ---- */
+/* ---- 导出 / 导入 / 重置设置 ----
+   导出与导入是一对:导出落成一个 JSON 文件,导入把这个文件读回来。
+   注意原来只往剪贴板写 —— 那样"导出"出来的东西没法被"导入"读回来(读剪贴板
+   需要额外授权, silent 场景下常被拒),两个功能根本接不上。 */
 (function () {
   const exp = document.getElementById('exportSettings');
+  const imp = document.getElementById('importSettings');
+  const impFile = document.getElementById('importSettingsFile');
   const rst = document.getElementById('resetSettings');
-  exp && exp.addEventListener('click', () => {
+
+  function stamp() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+           '-' + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  /* 用 Blob + <a download> 落盘。返回是否成功 —— 某些内嵌 WebView
+     会静默拦掉下载,这时要退回剪贴板,不能让用户点了没反应。 */
+  function downloadJSON(name, text) {
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  exp && exp.addEventListener('click', async () => {
     const data = JSON.stringify(Settings.getState(), null, 2);
-    navigator.clipboard && navigator.clipboard.writeText(data).then(
-      () => toast('设置已复制到剪贴板'),
-      () => toast('复制失败,请手动截图保存')
-    );
+    const downloaded = downloadJSON('studyomni-settings-' + stamp() + '.json', data);
+    // 顺手也放一份到剪贴板:方便直接粘给同学 / 贴到 issue 里。
+    // 必须走 writeClipboard —— navigator.clipboard.writeText 在无用户激活的
+    // 场景里会既不 resolve 也不 reject,await 它会让按钮点了毫无反应。
+    const copied = await writeClipboard(data);
+    if (downloaded && copied) toast('设置已导出为 JSON 文件,并复制到剪贴板');
+    else if (downloaded) toast('设置已导出为 JSON 文件');
+    else if (copied) toast('下载被拦截,已改为复制到剪贴板');
+    else toast('导出失败,请重试');
   });
+
+  imp && imp.addEventListener('click', () => { impFile && impFile.click(); });
+
+  impFile && impFile.addEventListener('change', () => {
+    const f = impFile.files && impFile.files[0];
+    impFile.value = '';            // 清空,否则连续导入同一个文件不会再触发 change
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onerror = () => toast('文件读取失败');
+    reader.onload = () => {
+      let res = null;
+      try {
+        res = Settings.importState(String(reader.result || ''));
+      } catch (e) {
+        res = null;
+      }
+      if (!res) { toast('不是合法的设置文件(需要 JSON)'); return; }
+      if (!res.applied.length && !res.theme) {
+        // 区分"文件里压根没有我们认识的键"和"键认识但值不合法" ——
+        // 笼统说一句"没有可识别的设置项"会让人以为文件完全错了。
+        if (res.skipped.length) toast(res.skipped.length + ' 项设置的值不合法,已忽略');
+        else toast('文件里没有可识别的设置项');
+        return;
+      }
+      // 栏宽可能变了,分隔条要重新对准
+      if (window.StudyLayout && window.StudyLayout.refresh) window.StudyLayout.refresh();
+      const n = res.applied.length + (res.theme ? 1 : 0);
+      toast('已导入 ' + n + ' 项设置' +
+            (res.skipped.length ? ',' + res.skipped.length + ' 项无效已忽略' : ''));
+    };
+    reader.readAsText(f);
+  });
+
   rst && rst.addEventListener('click', () => {
     if (!confirm('确定把所有设置恢复为默认值吗?此操作不可撤销。')) return;
     Settings.reset();
@@ -5862,6 +6017,10 @@ function toast(msg) {
   // 面板内容变化会影响列宽,用 ResizeObserver 兜住
   if (window.ResizeObserver) new ResizeObserver(positionResizers).observe(main);
 
+  /* 对外只暴露"重新对准分隔条"。导入设置会改 col1 / col3,
+     但 main 自身尺寸没变,ResizeObserver 不会触发,得手动叫一次。 */
+  window.StudyLayout = { refresh: positionResizers };
+
   Settings.init();
   updateVisibility();
   initMathAuto();   // 公式渲染:接管所有后续进入 DOM 的 math-node
@@ -5890,11 +6049,12 @@ function toast(msg) {
 /* ---- 设置联动到具体功能(示例:文件大小上限、自动解析) ---- */
 document.addEventListener('settingschange', e => {
   const { key, value } = e.detail || {};
-  if (key === 'maxSize') {
+  // 'import' 是导入设置时发的一次性事件,可能同时改了很多项
+  if (key === 'maxSize' || key === 'import') {
     const hint = document.querySelector('.upload-zone .hint');
-    if (hint) hint.textContent = '支持 PNG · JPG · PDF · 最大 ' + value + 'MB';
+    if (hint) hint.textContent = '支持 PNG · JPG · PDF · 最大 ' + Settings.getState().maxSize + 'MB';
   }
-  if (key === 'model' || key === 'style') {
+  if (key === 'model' || key === 'style' || key === 'import') {
     // 真实项目里这里会把参数一并带进请求体;当前仅作提示
     console.log('[StudyOmni] 请求参数已更新:', Settings.getState());
   }
