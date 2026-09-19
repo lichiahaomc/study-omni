@@ -15,6 +15,7 @@ pnpm-lock.yaml
 # 验证过程的中间产物(截图、最小复现页、临时脚本)
 thinking-state-fix.png
 studyomni-*.png
+subject-picker-*.png
 .probe*
 .final*
 .compare*
@@ -27,6 +28,9 @@ studyomni-*.png
 .rltest/
 .clean/
 .verify/
+.pdf/
+.subj/
+.subj.bak.html
 .wrangler-login.log
 .servecheck.mjs
 

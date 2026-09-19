@@ -354,6 +354,13 @@
   [data-accent="it"]       { --accent: #65a30d; --accent-2: #a3e635; }  /* 橄榄 · 信息技术 */
   [data-accent="ai"]       { --accent: #d946ef; --accent-2: #e879f9; }  /* 品紫 · 人工智能 */
   [data-accent="art"]      { --accent: #f97316; --accent-2: #fdba74; }  /* 暖橙 · 艺术素养 */
+  [data-accent="web"]      { --accent: #16a34a; --accent-2: #4ade80; }  /* 草绿 · 前端/后端开发 */
+  [data-accent="db"]       { --accent: #ca8a04; --accent-2: #facc15; }  /* 金黄 · 数据库 */
+  [data-accent="system"]   { --accent: #0f766e; --accent-2: #2dd4bf; }  /* 深青 · 系统与网络 */
+  [data-accent="cs"]       { --accent: #0d9488; --accent-2: #5eead4; }  /* 青碧 · 计算机理论 */
+  [data-accent="business"] { --accent: #1e40af; --accent-2: #60a5fa; }  /* 深蓝 · 经管 */
+  [data-accent="psych"]    { --accent: #7e22ce; --accent-2: #c084fc; }  /* 深紫 · 心理学 */
+  [data-accent="medical"]  { --accent: #dc2626; --accent-2: #f87171; }  /* 正红 · 医学 */
 
   .subject-trigger {
     position: relative;
@@ -396,6 +403,12 @@
       inset 0 1px 1px rgba(255, 255, 255, .55),
       inset 0 -1px 1px rgba(255, 255, 255, .18);
     transition: background var(--dur-slow) var(--ease-out);
+  }
+  /* 语言类学科用两个字母更清楚(Py / JS / C#),单独放宽一点 */
+  .subject-badge.wide {
+    width: 30px;
+    font-size: calc(10px * var(--font-scale, 1));
+    letter-spacing: -.2px;
   }
   .subject-label { white-space: nowrap; }
   .subject-chevron {
@@ -516,9 +529,9 @@
     border-color: rgba(var(--primary-rgb), .58);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .16);
   }
-  /* 29 个学科一次装不下,列表区单独滚动;overscroll 拦截避免带动整页 */
+  /* 六十多个学科一次肯定装不下,列表区单独滚动;overscroll 拦截避免带动整页 */
   .subject-list {
-    max-height: min(56vh, 420px);
+    max-height: min(64vh, 520px);
     /* 只允许纵向滚动。注意:只写 overflow-y:auto 时,overflow-x 的计算值会
        被规范提升为 auto,而选项 hover 的位移 / 果冻动效的 translate 都会撑大
        滚动区域,于是底部冒出一条横向滚动条 —— 必须显式 hidden 掉。 */
@@ -2782,7 +2795,7 @@
         </button>
         <div class="subject-menu" id="subjectMenu">
           <div class="subject-menu-head">
-            <div class="subject-menu-label">选择学科 · 共 29 项</div>
+            <div class="subject-menu-label" id="subjectMenuLabel">选择学科</div>
             <input class="subject-search" id="subjectSearch" type="text"
                    placeholder="搜索学科,如 高中 / 物理"
                    aria-label="搜索学科" autocomplete="off" spellcheck="false">
@@ -2809,6 +2822,11 @@
               <button type="button" class="subject-option" role="option" aria-selected="false"
                       data-accent="science" data-badge="科" data-value="科学 · 小学">
                 <span class="subject-badge">科</span>科学 · 小学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="politics" data-badge="德" data-value="道德与法治 · 小学">
+                <span class="subject-badge">德</span>道德与法治 · 小学
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
             </div>
@@ -2857,6 +2875,11 @@
               <button type="button" class="subject-option" role="option" aria-selected="false"
                       data-accent="politics" data-badge="道" data-value="道法 · 初中">
                 <span class="subject-badge">道</span>道法 · 初中
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="it" data-badge="信" data-value="信息技术 · 初中">
+                <span class="subject-badge">信</span>信息技术 · 初中
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
             </div>
@@ -2912,12 +2935,125 @@
                 <span class="subject-badge">信</span>信息技术 · 高中
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="it" data-badge="通" data-value="通用技术 · 高中">
+                <span class="subject-badge">通</span>通用技术 · 高中
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
             </div>
-            <div class="subject-group" data-group="大学 · 进阶">
-              <div class="subject-group-label">大学 · 进阶</div>
+            <div class="subject-group" data-group="编程 · 计算机">
+              <div class="subject-group-label">编程 · 计算机</div>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="Py" data-value="Python · 进阶">
+                <span class="subject-badge wide">Py</span>Python · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="C+" data-value="C / C++ · 进阶">
+                <span class="subject-badge wide">C+</span>C / C++ · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="Ja" data-value="Java · 进阶">
+                <span class="subject-badge wide">Ja</span>Java · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="web" data-badge="JS" data-value="JavaScript · 进阶">
+                <span class="subject-badge wide">JS</span>JavaScript · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="Go" data-value="Go · 进阶">
+                <span class="subject-badge wide">Go</span>Go · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="Rs" data-value="Rust · 进阶">
+                <span class="subject-badge wide">Rs</span>Rust · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="C#" data-value="C# · 进阶">
+                <span class="subject-badge wide">C#</span>C# · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="web" data-badge="前" data-value="前端开发 · 进阶">
+                <span class="subject-badge">前</span>前端开发 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="web" data-badge="后" data-value="后端开发 · 进阶">
+                <span class="subject-badge">后</span>后端开发 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="db" data-badge="库" data-value="数据库 · 进阶">
+                <span class="subject-badge">库</span>数据库 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="算" data-value="算法与数据结构 · 进阶">
+                <span class="subject-badge">算</span>算法与数据结构 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="code" data-badge="竞" data-value="算法竞赛 · 进阶">
+                <span class="subject-badge">竞</span>算法竞赛 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="system" data-badge="系" data-value="操作系统 · 进阶">
+                <span class="subject-badge">系</span>操作系统 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="system" data-badge="网" data-value="计算机网络 · 进阶">
+                <span class="subject-badge">网</span>计算机网络 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="system" data-badge="组" data-value="计算机组成原理 · 进阶">
+                <span class="subject-badge">组</span>计算机组成原理 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="system" data-badge="编" data-value="编译原理 · 进阶">
+                <span class="subject-badge">编</span>编译原理 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="cs" data-badge="工" data-value="软件工程 · 进阶">
+                <span class="subject-badge">工</span>软件工程 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="system" data-badge="安" data-value="网络安全 · 进阶">
+                <span class="subject-badge">安</span>网络安全 · 进阶
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+            </div>
+            <div class="subject-group" data-group="大学">
+              <div class="subject-group-label">大学</div>
               <button type="button" class="subject-option" role="option" aria-selected="false"
                       data-accent="math" data-badge="数" data-value="高等数学 · 大学">
                 <span class="subject-badge">数</span>高等数学 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="math" data-badge="线" data-value="线性代数 · 大学">
+                <span class="subject-badge">线</span>线性代数 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="math" data-badge="概" data-value="概率论与数理统计 · 大学">
+                <span class="subject-badge">概</span>概率论与数理统计 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="math" data-badge="离" data-value="离散数学 · 大学">
+                <span class="subject-badge">离</span>离散数学 · 大学
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
               <button type="button" class="subject-option" role="option" aria-selected="false"
@@ -2926,13 +3062,8 @@
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
               <button type="button" class="subject-option" role="option" aria-selected="false"
-                      data-accent="code" data-badge="编" data-value="编程 · Python">
-                <span class="subject-badge">编</span>编程 · Python
-                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              </button>
-              <button type="button" class="subject-option" role="option" aria-selected="false"
-                      data-accent="code" data-badge="构" data-value="数据结构 · 大学">
-                <span class="subject-badge">构</span>数据结构 · 大学
+                      data-accent="chem" data-badge="化" data-value="大学化学 · 大学">
+                <span class="subject-badge">化</span>大学化学 · 大学
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
               <button type="button" class="subject-option" role="option" aria-selected="false"
@@ -2941,8 +3072,56 @@
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
               <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="ai" data-badge="机" data-value="机器学习 · 大学">
+                <span class="subject-badge">机</span>机器学习 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="business" data-badge="经" data-value="经济学原理 · 大学">
+                <span class="subject-badge">经</span>经济学原理 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="business" data-badge="会" data-value="会计学 · 大学">
+                <span class="subject-badge">会</span>会计学 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="psych" data-badge="心" data-value="心理学 · 大学">
+                <span class="subject-badge">心</span>心理学 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="politics" data-badge="法" data-value="法学基础 · 大学">
+                <span class="subject-badge">法</span>法学基础 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="medical" data-badge="医" data-value="医学基础 · 大学">
+                <span class="subject-badge">医</span>医学基础 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="english" data-badge="英" data-value="大学英语 · 大学">
+                <span class="subject-badge">英</span>大学英语 · 大学
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+            </div>
+            <div class="subject-group" data-group="通识 · 素养">
+              <div class="subject-group-label">通识 · 素养</div>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
                       data-accent="art" data-badge="艺" data-value="艺术素养 · 通识">
                 <span class="subject-badge">艺</span>艺术素养 · 通识
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="art" data-badge="乐" data-value="音乐 · 通识">
+                <span class="subject-badge">乐</span>音乐 · 通识
+                <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" class="subject-option" role="option" aria-selected="false"
+                      data-accent="art" data-badge="画" data-value="美术 · 通识">
+                <span class="subject-badge">画</span>美术 · 通识
                 <svg class="check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               </button>
             </div>
@@ -4188,17 +4367,63 @@ function loadPdfJs() {
   return pdfJsPromise;
 }
 
-async function extractPdfText(file) {
+/* ---- PDF:两条路 ----
+   ① 有文本层的电子版 → 直接抽文字,便宜又快
+   ② 扫描件(整页是图片,没有文本层)→ 把页面渲染成图,交给视觉模型
+   ②这条是演示最容易翻车的地方:真实的卷子/课本扫描件极多,
+   以前遇到就直接放弃,现在兜住了。 */
+const MAX_PDF_TEXT_PAGES = 20;   // 抽文本最多看这么多页,别把整本书塞进 prompt
+const MAX_SCAN_PAGES = 3;        // 扫描件最多渲染这么多页(每页都是一次视觉调用)
+const SCAN_CHARS_PER_PAGE = 30;  // 每页平均字数低于这个值,就判定为扫描件
+
+async function openPdf(file) {
   const lib = await loadPdfJs();
-  const doc = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
-  let text = '';
-  const pages = Math.min(doc.numPages, 20);   // 别把整本书塞进去
-  for (let i = 1; i <= pages; i++) {
+  return lib.getDocument({ data: await file.arrayBuffer() }).promise;
+}
+
+/* 抽文本层。除了正文,还返回字数,用来判断是不是扫描件 */
+async function pdfText(doc, maxPages) {
+  const n = Math.min(doc.numPages, maxPages || MAX_PDF_TEXT_PAGES);
+  let text = '', chars = 0;
+  for (let i = 1; i <= n; i++) {
     const page = await doc.getPage(i);
     const tc = await page.getTextContent();
-    text += tc.items.map(it => it.str).join(' ') + '\n';
+    const s = tc.items.map(it => it.str).join(' ');
+    chars += s.replace(/\s/g, '').length;
+    text += s + '\n';
   }
-  return { text: text.trim(), pages: doc.numPages };
+  return { text: text.trim(), chars, readPages: n, totalPages: doc.numPages };
+}
+
+/* 把前几页渲染成 JPEG dataURL。
+   2 倍缩放是为了让小字号的题目也清晰;超过 1600px 再缩回去,
+   和 compressImage 的上限保持一致,免得顶到请求体限制。 */
+async function pdfToImages(doc, maxPages) {
+  const n = Math.min(doc.numPages, maxPages || MAX_SCAN_PAGES);
+  const out = [];
+  for (let i = 1; i <= n; i++) {
+    const page = await doc.getPage(i);
+    let vp = page.getViewport({ scale: 2 });
+    const maxSide = Math.max(vp.width, vp.height);
+    if (maxSide > 1600) vp = page.getViewport({ scale: 2 * 1600 / maxSide });
+
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(vp.width));
+    cv.height = Math.max(1, Math.round(vp.height));
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff';           // 有些页面是透明的,不铺白底会变黑
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    // 同时给 canvas 和 canvasContext:不同 pdf.js 大版本取的名字不一样
+    await page.render({ canvas: cv, canvasContext: ctx, viewport: vp }).promise;
+    out.push(cv.toDataURL('image/jpeg', 0.85));
+  }
+  return out;
+}
+
+/* 判定:每页平均字数太少 → 没有可用的文本层 */
+function looksScanned(r) {
+  if (!r.chars) return true;
+  return r.chars / Math.max(1, r.readPages) < SCAN_CHARS_PER_PAGE;
 }
 
 function handleFiles(files) {
@@ -4254,13 +4479,26 @@ async function parseFile(file, item) {
   try {
     setFileMeta(item, isImage ? '识别题目中...' : '抽取文本中...', false);
 
-    let body;
+    let body, kind = '图片识别';
     if (isImage) {
       body = { type: 'image', imageBase64: await compressImage(file), subject: getSubject() };
     } else {
-      const r = await extractPdfText(file);
-      if (!r.text) { setFileMeta(item, '扫描件 PDF 暂不支持', false); return; }
-      body = { type: 'text', text: r.text, subject: getSubject() };
+      const doc = await openPdf(file);
+      const r = await pdfText(doc);
+
+      if (!looksScanned(r)) {
+        // 有文本层:走便宜的纯文本通道
+        kind = 'PDF 文本';
+        body = { type: 'text', text: r.text, subject: getSubject() };
+      } else {
+        // 扫描件:没有文本层,把页面渲染成图交给视觉模型
+        setFileMeta(item, '扫描件 · 渲染页面中...', false);
+        const images = await pdfToImages(doc, MAX_SCAN_PAGES);
+        if (!images.length) { setFileMeta(item, 'PDF 内容为空', false); return; }
+        kind = 'PDF 扫描页' + (doc.numPages > images.length ? '(前 ' + images.length + ' 页)' : '');
+        setFileMeta(item, 'AI 识别扫描页中...', false);
+        body = { type: 'images', images, subject: getSubject() };
+      }
     }
 
     setFileMeta(item, 'AI 解析中...', false);
@@ -4277,7 +4515,7 @@ async function parseFile(file, item) {
     AI.material = data.content;          // 之后的追问会自动带上这份素材
     AI.lastResult = data.content;
     AI.lastSource = file.name;
-    AI.lastKind = isImage ? '图片识别' : 'PDF 文本';
+    AI.lastKind = kind;
     renderResult({
       content: data.content,
       subject: getSubject(),
@@ -4499,8 +4737,19 @@ function clearFiles() {
   const listEl  = document.getElementById('subjectList');
   const searchEl = document.getElementById('subjectSearch');
   const emptyEl = document.getElementById('subjectEmpty');
+  const labelCountEl = document.getElementById('subjectMenuLabel');
   const groups  = listEl ? Array.from(listEl.querySelectorAll('.subject-group')) : [];
   if (!picker || !trigger || !menu) return;
+
+  /* 标题里的学科数量按实际选项算出来 —— 以前是写死的"共 29 项",
+     加了学科以后就一直是错的。搜索时顺带显示命中数,比干等更清楚。 */
+  function syncLabelCount(shown) {
+    if (!labelCountEl) return;
+    const q = searchEl ? searchEl.value.trim() : '';
+    labelCountEl.textContent = q
+      ? '选择学科 · 命中 ' + shown + ' / ' + options.length
+      : '选择学科 · 共 ' + options.length + ' 项';
+  }
 
   /* ---- 搜索过滤:按学科名匹配,空结果的学段分组整组隐藏 ---- */
   function applyFilter(q) {
@@ -4516,6 +4765,7 @@ function clearFiles() {
       g.style.display = any ? '' : 'none';
     });
     if (emptyEl) emptyEl.style.display = shown ? 'none' : '';
+    syncLabelCount(shown);
   }
   // 键盘导航只在可见项之间循环,否则会跳到被过滤掉的选项上
   const visible = () => options.filter(o => o.style.display !== 'none');
@@ -4619,6 +4869,9 @@ function clearFiles() {
       trigger.focus();
     }
   });
+
+  // 初始化就把数量算出来,别等用户点开才发现标题里的数字是旧的
+  applyFilter('');
 })();
 
 
