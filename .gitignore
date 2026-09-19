@@ -31,8 +31,16 @@ subject-picker-*.png
 .pdf/
 .subj/
 .subj.bak.html
+.mob/
 .wrangler-login.log
 .servecheck.mjs
+
+# 移动端验收截图
+mobile-gallery.png
+m1-*.png
+m2-*.png
+m3-*.png
+d1-*.png
 
 # 编辑器与系统
 .vscode/

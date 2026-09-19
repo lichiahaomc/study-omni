@@ -2,12 +2,17 @@
 <html lang="zh-CN" data-brand="green">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>StudyOmni · 多模态教学智能体</title>
 <meta name="description" content="上传题目图片,获得即时 AI 答疑讲解 — 粤港澳大湾区 AI Coding 创新大赛" />
 <style>
   :root {
     --font-scale: 1;
+    /* 移动端布局用的尺寸令牌。safe-area 在桌面与不支持 env() 的浏览器上是 0,不会影响原布局 */
+    --header-h: 60px;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --header-total: calc(var(--header-h) + var(--safe-t));
     --bg: #f7f7f9;
     --surface: #ffffff;
     --surface-2: #fafafb;
@@ -255,14 +260,46 @@
   /* 玻璃需要隔离层叠上下文,避免内阴影互相污染 */
   .glass { isolation: isolate; }
 
+  /* ===== 底部导航条(液态玻璃)=====
+     只在窄屏出现:宽屏三栏并排,一屏能看全,不需要它。
+     造型参考 iOS / HarmonyOS 的底部标签栏:半透明磨砂 + 细高光边 +
+     滑动药丸指示器 + 安全区留白。 */
+  .tabbar { display: none; }
+
+  /* 暗色主题:底部导航也要跟着暗下来,否则一条亮条压在暗页面上很跳 */
+  [data-theme="dark"] .tabbar {
+    background: linear-gradient(180deg, rgba(24, 33, 52, .74), rgba(15, 22, 38, .94));
+    border-top-color: rgba(255, 255, 255, .10);
+    box-shadow:
+      0 -8px 28px rgba(0, 0, 0, .34),
+      inset 0 1px 1px rgba(255, 255, 255, .08);
+  }
+  [data-theme="dark"] .tab-indicator {
+    background: rgba(var(--primary-rgb), .26);
+    border-color: rgba(255, 255, 255, .14);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .10);
+  }
+  [data-theme="dark"] .tab-dot { box-shadow: 0 0 0 2px rgba(15, 22, 38, .94); }
+  [data-theme="dark"] .tab-item.is-active { color: var(--primary-tint); }
+
   /* SVG 液态扭曲滤镜挂载点 */
   .liquid-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
   /* ===== Layout ===== */
   .app {
     display: grid;
-    grid-template-rows: 60px 1fr;
+    /* 单列网格。用 minmax(0, 1fr) 而不是默认的 auto:
+       auto 轨道的下限是子项的 min-content,而 header 的 min-content 约 382px
+       (logo + 标题 + 学科胶囊 + 两个图标按钮),会把整个网格撑到 382px,
+       于是 360/375px 的手机上整页横向溢出 —— 用户表现为"要缩小才看得全"。
+       写成 minmax(0, 1fr) 后列宽只跟容器走,子项自己负责收窄。 */
+    grid-template-columns: minmax(0, 1fr);
+    /* 第三行留给移动端的底部导航条;它在宽屏是 display:none,那一行高度为 0 */
+    grid-template-rows: var(--header-total) 1fr auto;
+    /* 先写 100vh 兜底,再写 100dvh 覆盖 —— 手机上 100vh 含地址栏高度,
+       会导致页面比可视区高,底部被裁掉、必须下滑或缩放 */
     height: 100vh;
+    height: 100dvh;
     position: relative;
     z-index: 1;
   }
@@ -273,6 +310,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
+    padding-top: var(--safe-t);   /* 刘海 / 状态栏 */
+    box-sizing: border-box;
     background: linear-gradient(135deg, rgba(255,255,255,.74), rgba(255,255,255,.46));
     backdrop-filter: blur(20px) saturate(185%);
     -webkit-backdrop-filter: blur(20px) saturate(185%);
@@ -607,7 +646,8 @@
     grid-template-columns: var(--col-1, 300px) 1fr var(--col-3, 400px);
     gap: var(--gap);
     padding: var(--pad-page);
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--header-h));
+    height: calc(100dvh - var(--header-total));
     overflow: hidden;
     position: relative;
   }
@@ -861,6 +901,32 @@
     color: var(--primary);
     border-color: rgba(199, 210, 254, .90);
     box-shadow: var(--shadow-2), 0 0 0 3px rgba(var(--primary-rgb), .07);
+  }
+  /* 「也可以直接 Ctrl+V 粘贴截图」——第二行提示,比胶囊更轻 */
+  .upload-zone .hint-paste {
+    margin-top: 7px;
+    display: block;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .upload-zone .hint-paste:hover { color: var(--text-tertiary); box-shadow: none; }
+  .upload-zone kbd {
+    font-family: inherit;
+    font-size: .94em;
+    font-weight: var(--fw-semibold);
+    padding: 1px 5px;
+    margin: 0 1px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 -1px 0 rgba(148, 163, 184, .34);
+    color: var(--text-secondary);
+  }
+  /* 触屏设备上没有 Ctrl 键,这行提示只会让人困惑 */
+  @media (hover: none) and (pointer: coarse) {
+    .upload-zone .hint-paste { display: none; }
   }
 
   .file-list {
@@ -2611,62 +2677,191 @@
     .panel-header { padding: 14px 16px; }
   }
 
-  /* ===== 窄屏 / 竖屏:三栏改为纵向堆叠 =====
-     关键点:面板必须能"长高",否则在有限的视口高度里三个面板互相挤压,
-     AI 答疑面板会被压成只剩一条标题栏。所以这里给每个面板一个舒适的最小高度,
-     并让 .main 整体可滚动(而不是把面板 max-height 压死)。 */
+  /* ===== 窄屏 / 竖屏:改为"一次一栏 + 底部导航" =====
+     早期做法是把三栏纵向堆成一个 1000px 高的长页面,手机上必须不停下滑,
+     而且面板被压扁、输入框被顶出屏幕。现在改成底部标签栏切换,
+     每个栏独占一屏高度,栏内各自滚动 —— 不再需要下滑或缩小页面。 */
   @media (max-width: 860px), (orientation: portrait) and (max-width: 1024px) {
-    .app { grid-template-rows: auto 1fr; }
+    .tabbar {
+      display: flex;
+      position: relative;
+      align-items: stretch;
+      gap: 4px;
+      padding: 6px 10px calc(6px + var(--safe-b));
+      background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.88));
+      backdrop-filter: blur(30px) saturate(190%);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
+      border-top: 1px solid rgba(255, 255, 255, .82);
+      box-shadow:
+        0 -8px 28px rgba(15, 23, 42, .07),
+        inset 0 1px 1px rgba(255, 255, 255, .92);
+      z-index: 20;
+    }
+    /* iPhone 底部横条 / 安卓手势条以上留白,避免按钮被系统手势区盖住 */
+    .tabbar::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: var(--safe-b);
+      pointer-events: none;
+    }
+    /* 滑动药丸:三个标签等宽,位移用自身宽度算,不依赖 JS 测量 */
+    .tab-indicator {
+      position: absolute;
+      top: 6px;
+      bottom: calc(6px + var(--safe-b));
+      left: 10px;
+      width: calc((100% - 20px - 8px) / 3);
+      border-radius: 16px;
+      background: rgba(var(--primary-rgb), .13);
+      border: 1px solid rgba(255, 255, 255, .74);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, .90);
+      pointer-events: none;
+      transition: transform .4s var(--ease-spring);
+    }
+    .tabbar[data-active="result"] .tab-indicator { transform: translateX(calc(100% + 4px)); }
+    .tabbar[data-active="chat"]   .tab-indicator { transform: translateX(calc(200% + 8px)); }
+
+    .tab-item {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px;
+      padding: 7px 2px 5px;
+      border: 0; background: none;
+      cursor: pointer;
+      border-radius: 16px;
+      color: var(--text-tertiary);
+      font-family: inherit;
+      font-size: calc(11px * var(--font-scale, 1));
+      font-weight: var(--fw-semibold);
+      letter-spacing: .2px;
+      /* 双击不缩放 + 去掉移动端的半透明高亮块 */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: color .22s var(--ease-out), transform .22s var(--ease-out);
+      z-index: 1;
+    }
+    .tab-item svg { width: 21px; height: 21px; flex-shrink: 0; }
+    .tab-item:active { transform: scale(.93); }
+    .tab-item.is-active { color: var(--primary); }
+    /* 未读小红点:解析完成 / 回答就绪时提示切过去看看 */
+    .tab-dot {
+      position: absolute;
+      top: 5px;
+      right: 50%;
+      margin-right: -20px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--danger, #ef4444);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .92);
+      opacity: 0;
+      transform: scale(.4);
+      transition: opacity .2s, transform .2s var(--ease-spring);
+    }
+    .tab-item.has-dot .tab-dot { opacity: 1; transform: scale(1); }
+    /* 数字角标(上传了几份素材) */
+    .tab-count {
+      position: absolute;
+      top: 3px;
+      right: 50%;
+      margin-right: -24px;
+      min-width: 16px; height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      font-size: calc(10px * var(--font-scale, 1));
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(var(--primary-rgb), .40);
+      display: none;
+    }
+    .tab-item.has-count .tab-count { display: block; }
+
+    /* --- 关键:三栏改成"只显示当前这一栏",每栏独占剩余高度 --- */
     .main {
       grid-template-columns: 1fr;
-      /* 三栏改纵向后给每栏一个可伸缩的高度轨道 */
-      grid-template-rows: minmax(280px, auto) minmax(300px, auto) minmax(420px, 1fr);
-      overflow-y: auto;
-      overflow-x: hidden;
-      gap: 14px;
-      padding: 14px;
-      height: calc(100vh - 60px);
-      -webkit-overflow-scrolling: touch;
-    }
-    /* 解除高度压制,让面板按内容自然撑开 */
-    .panel,
-    .chat-panel {
-      max-height: none;
+      grid-template-rows: 1fr;
+      gap: 0;
+      padding: 10px 10px 8px;
+      /* 高度交给 grid 的 1fr,不再写死,否则会覆盖掉导航条占用的空间 */
+      height: auto;
       min-height: 0;
+      overflow: hidden;
     }
-    /* AI 答疑面板至少留出一屏对话区,保证可读可用 */
-    .chat-panel { min-height: 420px; }
-    .chat-messages { min-height: 220px; }
-    .upload-zone { padding: 24px 14px; }
-    /* 竖屏下拖拽分栏没有意义(已纵向堆叠),隐藏分隔条 */
+    .main > .panel { display: none; }
+    .main > .panel.is-active { display: flex; }
+    .panel,
+    .chat-panel { max-height: none; min-height: 0; }
+    .upload-zone { padding: 22px 14px; }
+    /* 竖屏下拖拽分栏没有意义,隐藏分隔条 */
     .resizer { display: none !important; }
+
+    /* iOS 的自动放大陷阱:输入框字号小于 16px 时,聚焦会把整页放大,
+       用户得手动缩回去 —— 这也是"手机上显示不完整"的常见原因。
+       这里统一抬到 16px(视觉上几乎无差别)。 */
+    .chat-input textarea,
+    .subject-search,
+    input,
+    textarea,
+    select { font-size: 16px; }
+    .chat-input textarea { max-height: 96px; }
+    /* 键盘弹起时视口会变矮,避免最后一屏被挡住 */
+    .chat-input-wrap { padding: 10px 12px 12px; }
+
+    /* --- 顶栏收缩:窄屏上把 header 压到 360px 以内 ---
+       它是撑宽整页的元凶(见 .app 上的注释),这里逐个"允许被压":
+       文字块可省略号截断、学科胶囊封顶、间距收紧。 */
+    .header { padding-left: 12px; padding-right: 12px; gap: 8px; }
+    .header-left { flex: 1 1 auto; min-width: 0; gap: 9px; }
+    .brand { min-width: 0; }
+    .brand-title,
+    .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-right { flex: 0 1 auto; min-width: 0; gap: 6px; }
+    /* 学科名可能很长(概率论与数理统计 · 大学),给个上限并省略 */
+    .subject-trigger { max-width: 46vw; min-width: 0; }
+    .subject-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .icon-btn { width: 34px; height: 34px; }
   }
 
-  /* 超窄屏:进一步压缩留白,但不牺牲面板可用高度 */
+  /* 更窄的手机(≤430px):副标题是装饰性的,让位给真正有用的内容 */
+  @media (max-width: 430px) {
+    .brand-sub { display: none; }
+    .logo { width: 32px; height: 32px; border-radius: 12px; }
+    .subject-trigger { max-width: 42vw; }
+  }
+
+  /* 超窄屏:再压一点留白,但保证每栏的可用高度 */
   @media (max-width: 560px) {
-    .main {
-      grid-template-rows: minmax(260px, auto) minmax(280px, auto) minmax(400px, 1fr);
-      padding: 10px;
-      gap: 10px;
-    }
+    .main { padding: 8px 8px 6px; }
     .panel-body { padding: 14px; }
     .chat-messages { padding: 14px; }
     .panel-header { padding: 12px 14px; }
-    .action-bar { padding: 10px 14px; }
-    .suggestions { padding: 0 14px 8px; }
+    .action-bar { padding: 10px 12px; }
+    .suggestions { padding: 0 12px 8px; }
+    .header { padding-left: 14px; padding-right: 14px; }
   }
 
-  /* 横屏但高度很矮(如手机横放):同样纵向堆叠,避免三栏被压扁 */
+  /* 横屏但高度很矮(手机横放):同样一次一栏 */
   @media (orientation: landscape) and (max-height: 520px) {
     .main {
       grid-template-columns: 1fr;
-      grid-template-rows: minmax(240px, auto) minmax(260px, auto) minmax(360px, 1fr);
-      overflow-y: auto;
-      overflow-x: hidden;
-      height: calc(100vh - 60px);
+      grid-template-rows: 1fr;
+      padding: 6px;
+      height: auto;
+      overflow: hidden;
     }
-    .panel, .chat-panel { max-height: none; }
-    .chat-panel { min-height: 360px; }
+    .main > .panel { display: none; }
+    .main > .panel.is-active { display: flex; }
+    .panel, .chat-panel { max-height: none; min-height: 0; }
+    .tabbar { padding-top: 3px; padding-bottom: calc(3px + var(--safe-b)); }
+    .tab-indicator { top: 3px; bottom: calc(3px + var(--safe-b)); }
+    .tab-item { flex-direction: row; gap: 6px; padding: 5px 2px; }
+    .tab-item svg { width: 18px; height: 18px; }
+    .upload-tips { display: none; }
     .resizer { display: none !important; }
   }
 
@@ -3161,7 +3356,7 @@
             aria-label="拖拽调整「AI 答疑」栏宽度" title="拖拽调整宽度 · 双击恢复默认"></button>
 
     <!-- Left: Upload -->
-    <section class="panel" aria-label="素材上传">
+    <section class="panel is-active" data-pane="upload" aria-label="素材上传">
       <div class="panel-header">
         <div class="left">
           <span>素材上传</span>
@@ -3181,6 +3376,7 @@
           <h4>拖拽文件到此处</h4>
           <p>或点击选择本地文件</p>
           <span class="hint">支持 PNG · JPG · PDF · 最大 10MB</span>
+          <span class="hint hint-paste" id="pasteHint">也可以直接 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴截图</span>
           <input type="file" id="fileInput" hidden multiple accept="image/*,.pdf" />
         </div>
 
@@ -3194,7 +3390,7 @@
     </section>
 
     <!-- Center: Result -->
-    <section class="panel" aria-label="解析结果">
+    <section class="panel" data-pane="result" aria-label="解析结果">
       <div class="panel-header">
         <div class="left">
           <span>解析结果</span>
@@ -3236,7 +3432,7 @@
     </section>
 
     <!-- Right: Chat -->
-    <section class="panel chat-panel" aria-label="AI 答疑">
+    <section class="panel chat-panel" data-pane="chat" aria-label="AI 答疑">
       <div class="panel-header">
         <div class="left">
           <span class="status-dot"></span>
@@ -3277,6 +3473,40 @@
     </section>
 
   </main>
+
+    <!-- 移动端底部导航:宽屏隐藏(三栏并排时不需要) -->
+    <nav class="tabbar" id="tabbar" data-active="upload" aria-label="主导航">
+      <span class="tab-indicator" aria-hidden="true"></span>
+
+      <button type="button" class="tab-item is-active" data-tab="upload" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>上传</span>
+        <span class="tab-count" id="tabCountUpload" aria-hidden="true">0</span>
+      </button>
+
+      <button type="button" class="tab-item" data-tab="result">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/>
+          <line x1="9" y1="17" x2="13" y2="17"/>
+        </svg>
+        <span>解析</span>
+        <span class="tab-dot" id="tabDotResult" aria-hidden="true"></span>
+      </button>
+
+      <button type="button" class="tab-item" data-tab="chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>
+        </svg>
+        <span>答疑</span>
+        <span class="tab-dot" id="tabDotChat" aria-hidden="true"></span>
+      </button>
+    </nav>
 </div>
 
 <!-- ===== 设置抽屉 =====
@@ -4049,6 +4279,8 @@ async function realChat(question) {
 
     const reply = await readSSE(res, bubble, payload);
     if (reply) AI.history.push({ role: 'assistant', content: reply });
+    // 回答期间用户可能切到别的栏了,给「答疑」点个未读灯
+    if (reply && window.StudyTabs) window.StudyTabs.mark('chat');
   } catch (e) {
     // 连请求都没发出去(fetch 本身失败)——给条能照着排查的提示
     failBubble(bubble, (e && e.message) || String(e));
@@ -4427,7 +4659,8 @@ function looksScanned(r) {
 }
 
 function handleFiles(files) {
-  Array.from(files).forEach(file => {
+  const list = Array.from(files);
+  list.forEach(file => {
     const item = document.createElement('div');
     item.className = 'file-item';
     item.innerHTML = `
@@ -4452,10 +4685,18 @@ function handleFiles(files) {
         item.querySelector('.file-thumb').innerHTML = `<img src="${e.target.result}" alt="">`;
       };
       reader.readAsDataURL(file);
+    } else {
+      // PDF 没有缩略图,给个图标 —— 否则一直停在校时器上,看着像卡住了
+      item.querySelector('.file-thumb').textContent = '📄';
     }
 
     parseFile(file, item);
   });
+
+  // 手机上人还在「上传」栏,自动切到「解析」看进度;宽屏三栏并排,不用切
+  if (list.length && window.StudyTabs && window.StudyTabs.isCompact()) {
+    window.StudyTabs.show('result');
+  }
 }
 
 async function parseFile(file, item) {
@@ -4524,6 +4765,8 @@ async function parseFile(file, item) {
     });
     syncFavoriteBtn();
     if (typeof toast === 'function') toast('解析完成,可以开始追问了');
+    // 手机上如果人还在「上传」栏,提示「解析」栏有结果了
+    if (window.StudyTabs) window.StudyTabs.mark('result');
   } catch (e) {
     const msg = (e && e.message) || String(e);
     // 纯静态打开时没有后端,退回演示行为,不要吓用户
@@ -4640,8 +4883,10 @@ async function sharePage() {
   toast('复制失败,请手动复制地址栏链接');
 }
 
-/* 「开始答疑」:把焦点送到输入框。这是个导航按钮,不该什么都不做 */
+/* 「开始答疑」:把焦点送到输入框。这是个导航按钮,不该什么都不做。
+   手机上它还得负责切栏 —— 输入框在「答疑」栏里,不切过去根本看不到。 */
 function focusAsk() {
+  if (window.StudyTabs && window.StudyTabs.isCompact()) window.StudyTabs.show('chat');
   const input = document.getElementById('chatInput');
   if (!input) return;
   input.focus();
@@ -4703,6 +4948,10 @@ document.querySelectorAll('.file-item').forEach(bindRemove);
 
 function updateFileCount() {
   fileCount.textContent = fileList.children.length;
+  // 顺手同步底部导航上的数量角标。
+  // 注意这里必须用 window.StudyTabs 而不是直接引 Tabs —— 初始化时
+  // updateFileCount() 会先跑,那时 const Tabs 还在暂时性死区,直接引用会抛 ReferenceError。
+  if (window.StudyTabs) window.StudyTabs.refresh();
 }
 // 初始化时对一次账:HTML 里写的数字只是占位,真实数量以实际列表为准
 updateFileCount();
@@ -4725,6 +4974,206 @@ function clearFiles() {
   if (empty) empty.style.display = '';
   syncFavoriteBtn();
 }
+
+/* ==================== 移动端底部导航 ====================
+   宽屏三栏并排,一屏看全,不需要导航;窄屏才切成"一次一栏"。
+   所以这里的逻辑只管切换 class,布局全靠 CSS 媒体查询决定。 */
+const Tabs = (function () {
+  const KEY = 'studyomni-tab';
+  const PANES = ['upload', 'result', 'chat'];
+  const bar = document.getElementById('tabbar');
+  if (!bar) return { show() {}, mark() {}, refresh() {}, current: () => 'upload' };
+
+  const items = Array.from(bar.querySelectorAll('.tab-item'));
+  const panels = {};
+  PANES.forEach(p => { panels[p] = document.querySelector('.panel[data-pane="' + p + '"]'); });
+
+  let current = 'upload';
+
+  function paint(name) {
+    items.forEach(it => {
+      const on = it.dataset.tab === name;
+      it.classList.toggle('is-active', on);
+      if (on) it.setAttribute('aria-current', 'page');
+      else it.removeAttribute('aria-current');
+    });
+    PANES.forEach(p => {
+      if (panels[p]) panels[p].classList.toggle('is-active', p === name);
+    });
+    bar.dataset.active = name;
+  }
+
+  /* 切栏目。滚动位置不重置 —— 来回切换时保留各自的阅读位置更自然 */
+  function show(name, opts) {
+    if (!PANES.includes(name)) return;
+    const changed = name !== current;
+    current = name;
+    paint(name);
+    if (opts && opts.markSeen !== false) markSeen(name);
+    if (name === 'chat') {
+      const box = document.getElementById('chatMessages');
+      if (box) box.scrollTop = box.scrollHeight;
+      const input = document.getElementById('chatInput');
+      if (opts && opts.focus && input) input.focus();
+    }
+    if (changed && opts && opts.toast) toast(opts.toast);
+  }
+
+  /* 未读小红点。人就在这个栏里的时候不点灯 —— 那是干扰 */
+  function dotName(name) { return name === 'result' ? 'tabDotResult' : name === 'chat' ? 'tabDotChat' : null; }
+  function mark(name) {
+    if (name === current) return;
+    const id = dotName(name);
+    if (!id) return;
+    const el = document.getElementById(id);
+    const item = el && el.closest('.tab-item');
+    if (item) item.classList.add('has-dot');
+  }
+  function markSeen(name) {
+    const id = dotName(name);
+    if (!id) return;
+    const el = document.getElementById(id);
+    const item = el && el.closest('.tab-item');
+    if (item) item.classList.remove('has-dot');
+  }
+
+  /* 上传数量角标 */
+  function refresh() {
+    const n = (typeof fileList !== 'undefined' && fileList) ? fileList.children.length : 0;
+    const el = document.getElementById('tabCountUpload');
+    if (!el) return;
+    el.textContent = n > 99 ? '99+' : String(n);
+    const item = el.closest('.tab-item');
+    if (item) item.classList.toggle('has-count', n > 0);
+  }
+
+  items.forEach(it => {
+    it.addEventListener('click', () => show(it.dataset.tab));
+  });
+
+  // 记住上次看的栏目;刷新后回到原处
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (PANES.includes(saved)) { current = saved; paint(saved); }
+  } catch (e) {}
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      try { if (localStorage.getItem(KEY) !== current) localStorage.setItem(KEY, current); } catch (e) {}
+    }
+  });
+
+  return {
+    show,
+    mark,
+    markSeen,
+    refresh,
+    current: () => current,
+    /* 当前是不是手机上的"单栏模式":用媒体查询判断,和 CSS 保持同一套条件 */
+    isCompact: () => window.matchMedia(
+      '(max-width: 860px), (orientation: portrait) and (max-width: 1024px)'
+    ).matches,
+  };
+})();
+
+/* 挂到 window 上,给初始化更早的 updateFileCount() 用(见那里的注释)。
+   const 声明的 Tabs 在 TDZ 里,连 typeof 都会抛错,所以只能走 window。 */
+window.StudyTabs = Tabs;
+Tabs.refresh();
+
+/* 手机上"Enter 发送 · Shift+Enter 换行"这句提示既没意义也会被截断,
+   窄屏换一句短的。 */
+(function () {
+  const ta = document.getElementById('chatInput');
+  if (!ta || !window.matchMedia) return;
+  const mq = window.matchMedia('(max-width: 860px)');
+  const LONG = ta.placeholder;
+  const SHORT = '输入你的问题...';
+  const apply = () => { ta.placeholder = mq.matches ? SHORT : LONG; };
+  apply();
+  if (mq.addEventListener) mq.addEventListener('change', apply);
+  else if (mq.addListener) mq.addListener(apply);
+})();
+
+// 每次切换都记一下,下次打开还原
+(function () {
+  const bar = document.getElementById('tabbar');
+  if (!bar) return;
+  bar.addEventListener('click', e => {
+    const it = e.target.closest('.tab-item');
+    if (!it) return;
+    try { localStorage.setItem('studyomni-tab', it.dataset.tab); } catch (err) {}
+  });
+})();
+
+/* ==================== Ctrl+V 粘贴上传 ====================
+   截图工具、微信、文件管理器复制之后直接 Ctrl+V,不用先存盘再点选择文件。
+   纯文本粘贴不拦截 —— 那是用户想往输入框里粘字。 */
+function filesFromClipboard(dt) {
+  if (!dt) return [];
+  const out = [];
+  const push = f => { if (f && out.indexOf(f) < 0) out.push(f); };
+
+  // 现代浏览器:复制文件时 dt.files 直接可用
+  if (dt.files && dt.files.length) {
+    for (let i = 0; i < dt.files.length; i++) push(dt.files[i]);
+  }
+  // 兜底:截图工具往往只出现在 items 里
+  if (!out.length && dt.items) {
+    for (let i = 0; i < dt.items.length; i++) {
+      const it = dt.items[i];
+      if (it.kind !== 'file') continue;
+      const f = it.getAsFile && it.getAsFile();
+      push(f);
+    }
+  }
+  return out;
+}
+
+/* 只收图片和 PDF —— 和点选择文件时的规则保持一致 */
+function acceptedOnly(files) {
+  const okList = [];
+  let rejected = 0;
+  files.forEach(f => {
+    const isImg = (f.type || '').startsWith('image/');
+    const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+    if (isImg || isPdf) okList.push(f);
+    else rejected++;
+  });
+  return { okList, rejected };
+}
+
+document.addEventListener('paste', e => {
+  const all = filesFromClipboard(e.clipboardData);
+  if (!all.length) return;              // 纯文本:放行,交给浏览器默认行为
+
+  e.preventDefault();                   // 有文件就别再往输入框里塞东西了
+  const { okList, rejected } = acceptedOnly(all);
+
+  if (!okList.length) {
+    toast('剪贴板里的内容不是图片或 PDF');
+    return;
+  }
+
+  // 粘贴来的文件常常没有有意义的名字,补一个,列表里才不会显示空白
+  const stamped = okList.map((f, i) => {
+    const named = f.name && f.name !== 'image.png' && f.name !== 'blob';
+    if (named) return f;
+    const ext = (f.type || '').startsWith('image/')
+      ? '.' + ((f.type || '').split('/')[1] || 'png').replace('jpeg', 'jpg')
+      : '.pdf';
+    const ts = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const label = '粘贴-' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds())
+      + (okList.length > 1 ? '-' + (i + 1) : '') + ext;
+    try { return new File([f], label, { type: f.type || 'image/png' }); }
+    catch (err) { return f; }
+  });
+
+  handleFiles(stamped);   // 内部已负责切到「解析」栏
+  toast('已从剪贴板加入 ' + stamped.length + ' 个文件'
+    + (rejected ? '(' + rejected + ' 个不支持的已跳过)' : ''));
+});
 
 /* ---- 学科选择器:自定义玻璃下拉 ---- */
 (function () {
