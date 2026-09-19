@@ -2412,23 +2412,43 @@
   .switch[aria-checked="true"] .switch-knob { transform: translateX(18px); }
   .switch:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 
-  /* ---- 滑块 ---- */
+  /* ---- 滑块 ----
+     原来是"假进度":轨道用一条写死的渐变(34% 处色停),滑块拖到哪它都不动,
+     看着像进度条,其实永远停在同一个位置。
+     现在拆成两层:
+       1) 底层 = 灰色底轨(::-webkit-slider-runnable-track / ::-moz-range-track)
+       2) 上层 = 进度填充,由 JS 按 --fill 画在 input 自己的背景上
+     填充必须画在 input 上、而不是伪元素里:伪元素上的 background 变化
+     不会参与 transition,做不出平滑跟手的效果。
+     Firefox 原生有 ::-moz-range-progress,不用 JS 算,但那边的填充与
+     input 背景会叠在一起,所以 Firefox 下让 --fill 保持 0 即可(见 JS)。 */
   .range-wrap { flex-shrink: 0; width: 152px; }
   .range {
+    --fill: 0px;
+    --thumb-size: 15px;   /* JS 读它来算填充宽度,别只改下面的 width */
     appearance: none;
     width: 100%;
     height: 22px;
-    background: transparent;
     cursor: pointer;
+    background-image: linear-gradient(90deg,
+      rgba(var(--primary-rgb), .55) 0,
+      rgba(var(--primary-2-rgb), .42) 100%);
+    background-repeat: no-repeat;
+    background-size: var(--fill) 5px;
+    background-position: left center;
+    transition: background-size var(--dur) var(--ease-out);
   }
+  /* 拖动中关掉过渡,否则拇指已经走了填充还在补间,视觉上会脱节 */
+  .range.is-dragging { transition: none; }
+
   .range::-webkit-slider-runnable-track {
     height: 5px;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgba(var(--primary-rgb), .34), rgba(var(--primary-2-rgb), .24) 62%, var(--border-strong));
+    background: var(--border-strong);
   }
   .range::-webkit-slider-thumb {
     appearance: none;
-    width: 15px; height: 15px;
+    width: var(--thumb-size); height: var(--thumb-size);
     margin-top: -5px;
     border-radius: 50%;
     background: #fff;
@@ -2437,12 +2457,20 @@
     transition: transform var(--dur) var(--ease-spring);
   }
   .range::-webkit-slider-thumb:hover { transform: scale(1.14); }
+  .range:active::-webkit-slider-thumb { transform: scale(1.06); }
+
   .range::-moz-range-track {
     height: 5px; border-radius: 999px;
-    background: linear-gradient(90deg, rgba(var(--primary-rgb), .34), var(--border-strong));
+    background: var(--border-strong);
+  }
+  /* Firefox 原生支持进度段,不用 JS 算 —— 也就省掉了 input 背景那一层 */
+  .range::-moz-range-progress {
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(var(--primary-rgb), .55), rgba(var(--primary-2-rgb), .42));
   }
   .range::-moz-range-thumb {
-    width: 15px; height: 15px;
+    width: var(--thumb-size); height: var(--thumb-size);
     border-radius: 50%;
     background: #fff;
     border: 2px solid var(--primary);
@@ -2450,6 +2478,7 @@
   }
   .range:focus-visible { outline: none; }
   .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(var(--primary-rgb), .22); }
+  .range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(var(--primary-rgb), .22); }
 
   /* ---- 布局 / 关于 ---- */
   .layout-reset-row {
@@ -5511,9 +5540,29 @@ const Settings = (function () {
     if (c1) c1.textContent = state.col1;
     if (c3) c3.textContent = state.col3;
   }
+  /* 把进度填充宽度算出来写进 --fill。
+     不能直接用百分比:原生 range 的拇指中心在两端时会往里收半个拇指宽
+     (即可用行程 ≈ 宽度 - 拇指宽),若按 0~100% 线性铺,填充的末端
+     会和拇指中心差最多 7~8px —— 拖到底时最明显。
+     所以按"拇指中心的实际位置"插值,填充就永远咬住拇指。 */
+  function paintRange(el) {
+    if (!el) return;
+    const min = Number(el.min || 0);
+    const max = Number(el.max || 100);
+    const val = Number(el.value);
+    const w = el.clientWidth || 152;
+    const cs = getComputedStyle(el);
+    const thumb = parseFloat(cs.getPropertyValue('--thumb-size')) || 15;
+    const usable = Math.max(0, w - thumb);
+    const ratio = max === min ? 0 : (val - min) / (max - min);
+    const fill = thumb / 2 + usable * Math.min(1, Math.max(0, ratio));
+    el.style.setProperty('--fill', fill.toFixed(2) + 'px');
+  }
+
   function setRange(id, val, outId) {
     const el = document.getElementById(id);
     if (el) el.value = val;
+    paintRange(el);
     const out = document.getElementById(outId);
     if (out) out.textContent = val;
   }
@@ -5569,6 +5618,10 @@ const Settings = (function () {
   function bindRange(id, key, outId, transform) {
     const el = document.getElementById(id);
     if (!el) return;
+    // 拖动期间关掉填充的过渡,松手再恢复 —— 否则填充永远慢半拍追着拇指跑
+    el.addEventListener('pointerdown', () => el.classList.add('is-dragging'));
+    ['pointerup', 'pointercancel', 'blur'].forEach(ev =>
+      el.addEventListener(ev, () => el.classList.remove('is-dragging')));
     el.addEventListener('input', () => {
       const raw = transform ? transform(el.value) : Number(el.value);
       state[key] = raw;
@@ -5616,6 +5669,10 @@ const Settings = (function () {
   }
 
   function getState() { return Object.assign({}, state, { theme: theme }); }
+
+  function repaintRanges() {
+    document.querySelectorAll('.range').forEach(paintRange);
+  }
 
   /* ---- 导入:逐项校验 ----
      外部 JSON 一律当不可信输入处理:
@@ -5701,10 +5758,24 @@ const Settings = (function () {
         if (theme === 'auto') applyTheme();
       });
     }
+
+    /* 窗口尺寸变了,滑块的行程也跟着变,填充必须重算。
+       用一个 resize 监听兜住所有宽度变化(拖分隔条改栏宽也会触发)。 */
+    let rzTick = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(rzTick);
+      rzTick = setTimeout(repaintRanges, 80);
+    });
+
+    // 字体加载完尺寸可能还会抖一下,再补一次
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => repaintRanges()).catch(() => {});
+    }
   }
 
   return {
     init, getState, apply, importState,
+    repaintRanges,
     defaults: function () { return Object.assign({}, DEFAULTS); },
     prefersDark,
     /* 主题统一入口。主页图标和设置面板都走这里,避免两套逻辑各改一半 */
@@ -5751,6 +5822,11 @@ const Settings = (function () {
     btn.setAttribute('aria-expanded', 'true');
     // 等过渡开始后再聚焦,避免 Safari 把滚动位置带跑
     setTimeout(() => drawer && drawer.focus(), 60);
+    // 抽屉在关闭状态量不到宽度(clientWidth 为 0),打开后必须补一次滑块重绘,
+    // 否则两个滑块的填充宽度会是错的
+    setTimeout(() => {
+      if (window.Settings && window.Settings.repaintRanges) window.Settings.repaintRanges();
+    }, 380);   // 等抽屉的宽度过渡跑完
   }
   function close() {
     layer.classList.remove('open');
@@ -5924,6 +6000,8 @@ function toast(msg) {
     const hide = isStacked();
     [r1, r2].forEach(r => { if (r) r.style.display = hide ? 'none' : ''; });
     if (!hide) positionResizers();
+    // 栏宽变化会改滑块的可用宽度,填充要一起重算
+    if (window.Settings && window.Settings.repaintRanges) window.Settings.repaintRanges();
   }
 
   function startDrag(e, which) {
