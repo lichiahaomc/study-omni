@@ -14,6 +14,7 @@ pnpm-lock.yaml
 
 # 验证过程的中间产物(截图、最小复现页、临时脚本)
 thinking-state-fix.png
+studyomni-*.png
 .probe*
 .final*
 .compare*
@@ -24,6 +25,10 @@ thinking-state-fix.png
 # 助手的工作记忆与临时目录,属于本地工具状态,不是交付物
 .learnbuddy/
 .rltest/
+.clean/
+.verify/
+.wrangler-login.log
+.servecheck.mjs
 
 # 编辑器与系统
 .vscode/

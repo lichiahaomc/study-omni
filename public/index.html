@@ -2562,6 +2562,19 @@
   [data-theme="dark"] .math-node:not([data-math-done]) { background: rgba(255, 255, 255, .10); }
   .message.user .bubble .math-node:not([data-math-done]) { background: rgba(0, 0, 0, .16); }
 
+  /* ===== 已收藏状态(收藏按钮点了要看得出来) ===== */
+  .btn.is-on {
+    border-color: rgba(var(--primary-rgb), .55);
+    color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .70);
+  }
+  [data-theme="dark"] .btn.is-on {
+    color: var(--primary-tint);
+    border-color: rgba(var(--primary-tint-rgb), .46);
+    background: rgba(var(--primary-rgb), .26);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: .01ms !important;
@@ -2973,7 +2986,7 @@
       <div class="panel-header">
         <div class="left">
           <span>素材上传</span>
-          <span class="count" id="fileCount">1</span>
+          <span class="count" id="fileCount">0</span>
         </div>
         <button class="ghost-btn" onclick="clearFiles()">清空</button>
       </div>
@@ -2992,19 +3005,7 @@
           <input type="file" id="fileInput" hidden multiple accept="image/*,.pdf" />
         </div>
 
-        <div class="file-list" id="fileList">
-          <div class="file-item">
-            <div class="file-thumb">📐</div>
-            <div class="file-info">
-              <div class="file-name">三角函数题.png</div>
-              <div class="file-meta done">
-                <span class="pulse"></span>
-                <span>已解析 · 2.4s</span>
-              </div>
-            </div>
-            <button class="file-remove" aria-label="移除">✕</button>
-          </div>
-        </div>
+        <div class="file-list" id="fileList"></div>
 
         <div class="upload-tips">
           <div class="title">💡 拍摄建议</div>
@@ -3021,8 +3022,8 @@
           <span class="count count-live">实时</span>
         </div>
         <div class="result-toolbar">
-          <button class="ghost-btn">📋 复制</button>
-          <button class="ghost-btn">🔄 重新解析</button>
+          <button class="ghost-btn" id="btnCopyResult">📋 复制</button>
+          <button class="ghost-btn" id="btnReparse">🔄 重新解析</button>
         </div>
       </div>
       <div class="panel-body" id="resultBody">
@@ -3039,64 +3040,14 @@
         </div>
 
         <!-- Result content —— 初始不带 active,由 renderResult() 在解析完成后打开 -->
-        <div class="result-content" id="resultContent">
-          <div class="meta-row">
-            <span class="meta-tag primary"><span class="dot"></span>数学 · 解三角形</span>
-            <span class="meta-tag"><span class="dot"></span>难度 ⭐⭐⭐</span>
-            <span class="meta-tag warn"><span class="dot"></span>含公式</span>
-            <span class="meta-tag"><span class="dot"></span>高考高频</span>
-          </div>
-
-          <div class="result-section">
-            <h5>题目原文</h5>
-            <div class="problem-card">
-              在 △<span class="label">ABC</span> 中,角 <span class="label">A、B、C</span> 所对的边分别为
-              <span class="label">a、b、c</span>。已知
-              <span class="label">a = √2</span>,
-              <span class="label">b = 2</span>,
-              <span class="label">sin B = √2/2</span>,求角 A 的大小。
-            </div>
-          </div>
-
-          <div class="result-section">
-            <h5>关键信息</h5>
-            <div class="info-grid">
-              <div class="info-cell">
-                <div class="key">已知条件</div>
-                <div class="val">a = √2, b = 2</div>
-              </div>
-              <div class="info-cell">
-                <div class="key">已知角度</div>
-                <div class="val">sin B = √2/2</div>
-              </div>
-              <div class="info-cell">
-                <div class="key">求解目标</div>
-                <div class="val">角 A 的度数</div>
-              </div>
-              <div class="info-cell">
-                <div class="key">推荐定理</div>
-                <div class="val">正弦定理</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="result-section">
-            <h5>涉及知识点</h5>
-            <div class="meta-row" style="margin-bottom: 0;">
-              <span class="meta-tag primary"><span class="dot"></span>正弦定理</span>
-              <span class="meta-tag primary"><span class="dot"></span>余弦定理</span>
-              <span class="meta-tag primary"><span class="dot"></span>三角形边角关系</span>
-              <span class="meta-tag primary"><span class="dot"></span>特殊角三角值</span>
-            </div>
-          </div>
-        </div>
+        <div class="result-content" id="resultContent"></div>
       </div>
 
       <div class="action-bar">
-        <button class="btn">📌 收藏题目</button>
-        <button class="btn">📤 分享</button>
+        <button class="btn" id="btnFavorite">📌 收藏题目</button>
+        <button class="btn" id="btnShare">📤 分享</button>
         <span class="spacer"></span>
-        <button class="btn btn-primary">
+        <button class="btn btn-primary" id="btnAsk">
           开始答疑
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M5 12h14m-7-7l7 7-7 7"/>
@@ -3120,30 +3071,9 @@
           <div class="avatar">AI</div>
           <div class="bubble">
             你好!我是 <strong>StudyOmni</strong> 👋<br><br>
-            上传题目图片后,我可以帮你<strong>识别题目</strong>、<strong>详细讲解</strong>、<strong>举一反三</strong>。<br><br>
-            试试问我:「这道题怎么解?」
-          </div>
-        </div>
-
-        <div class="message user">
-          <div class="avatar">U</div>
-          <div class="bubble">请帮我详细解答这道题,顺便讲一下思路</div>
-        </div>
-
-        <div class="message ai">
-          <div class="avatar">AI</div>
-          <div class="bubble">
-            这是一道经典的<strong>正弦定理</strong>应用题,我们一步步来看 👇<br><br>
-            <strong>思路:</strong>已知两边和其中一边的对角,用正弦定理求另一角。<br><br>
-            <strong>解题步骤:</strong>
-            <ol>
-              <li>根据正弦定理:<code>a/sin A = b/sin B</code></li>
-              <li>代入数值:<code>√2/sin A = 2/(√2/2)</code></li>
-              <li>解得:<code>sin A = 1/2</code></li>
-              <li>由于 <code>a &lt; b</code>,所以 <code>A &lt; B = 45°</code></li>
-              <li>因此 <strong>A = 30°</strong> ✓</li>
-            </ol>
-            需要我用更直观的几何方法再讲一遍吗?
+            上传题目图片或 PDF,我会先<strong>识别题目</strong>,
+            然后帮你<strong>详细讲解</strong>、<strong>举一反三</strong>。<br><br>
+            也可以直接问我任何学科问题。
           </div>
         </div>
       </div>
@@ -3869,6 +3799,12 @@ const AI = {
   backendOK: null,    // null=尚未探测  true=可用  false=降级演示
   pending: false,
   material: null,     // 最近一份素材的解析结果,每次提问都会带上
+  lastResult: '',     // 中栏当前展示的解析文本(复制 / 收藏要用)
+  lastSource: '',     // 来源文件名
+  lastKind: '',       // 图片识别 / PDF 文本
+  lastFile: null,     // 最近一次上传的 File,「重新解析」要用
+  lastItem: null,     // 对应的列表项 DOM,重解析后要回写状态
+  parsing: false,     // 解析进行中(防止重复触发)
 };
 
 function getSubject() {
@@ -4311,6 +4247,10 @@ async function parseFile(file, item) {
     return;
   }
 
+  // 记下来,「重新解析」按钮要用
+  AI.lastFile = file;
+  AI.lastItem = item;
+  AI.parsing = true;
   try {
     setFileMeta(item, isImage ? '识别题目中...' : '抽取文本中...', false);
 
@@ -4335,12 +4275,16 @@ async function parseFile(file, item) {
 
     setFileMeta(item, '已解析 · ' + (data.provider || ''), true);
     AI.material = data.content;          // 之后的追问会自动带上这份素材
+    AI.lastResult = data.content;
+    AI.lastSource = file.name;
+    AI.lastKind = isImage ? '图片识别' : 'PDF 文本';
     renderResult({
       content: data.content,
       subject: getSubject(),
       source: file.name,
-      kind: isImage ? '图片识别' : 'PDF 文本',
+      kind: AI.lastKind,
     });
+    syncFavoriteBtn();
     if (typeof toast === 'function') toast('解析完成,可以开始追问了');
   } catch (e) {
     const msg = (e && e.message) || String(e);
@@ -4352,8 +4296,134 @@ async function parseFile(file, item) {
     setFileMeta(item, '解析失败', false);
     if (typeof toast === 'function') toast('解析失败:' + msg.slice(0, 40));
     console.error('[StudyOmni parse]', msg);
+  } finally {
+    AI.parsing = false;   // 无论成功、失败还是提前 return 都要复位
   }
 }
+
+/* ==================== 中栏工具栏 & 底部操作按钮 ====================
+   这几个按钮以前是"有样式、没逻辑"的纯装饰 —— 演示时被点两下就露馅。
+   现在每个都接上真实行为,并且在"还没有素材"时明确告诉用户原因,
+   而不是毫无反应。 */
+
+/* 带超时的复制。
+   坑:clipboard.writeText() 在有些环境下**既不 resolve 也不 reject** ——
+   没有用户激活、内嵌 WebView、无头浏览器都会这样。直接 await 会让按钮
+   看起来彻底坏掉(点了没任何反应)。所以必须给它一个上限。 */
+function writeClipboard(text, timeoutMs) {
+  if (!navigator.clipboard || !navigator.clipboard.writeText) return Promise.resolve(false);
+  return Promise.race([
+    navigator.clipboard.writeText(text).then(() => true, () => false),
+    new Promise(r => setTimeout(() => r(false), timeoutMs || 1500)),
+  ]);
+}
+
+/* 复制解析结果。复制不成时退回"选中文本让用户自己 Ctrl+C",
+   每一步都兜住 —— 兜底路径本身再抛异常的话,用户就彻底没反馈了。 */
+async function copyResult() {
+  const text = AI.lastResult;
+  if (!text) { toast('还没有解析结果可复制'); return; }
+  if (await writeClipboard(text)) { toast('解析结果已复制到剪贴板'); return; }
+
+  const card = document.querySelector('#resultContent .problem-card');
+  // window.getSelection() 可能返回 null(无选区能力的上下文),必须判空
+  const sel = window.getSelection ? window.getSelection() : null;
+  if (card && sel) {
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(card);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      toast('已选中文本,按 Ctrl+C 复制');
+      return;
+    } catch (e2) { /* 选区 API 也不可用,继续往下兜底 */ }
+  }
+  toast('复制失败,请手动选择文本');
+}
+
+/* 重新解析最近一次上传的文件(识别不准时最有用) */
+function reparse() {
+  if (!AI.lastFile) { toast('还没有上传过素材'); return; }
+  if (AI.parsing) { toast('正在解析中,请稍候'); return; }
+  if (!AI.lastItem || !document.contains(AI.lastItem)) {
+    toast('对应的文件已被移除,请重新上传');
+    return;
+  }
+  toast('正在重新解析...');
+  parseFile(AI.lastFile, AI.lastItem);
+}
+
+/* 收藏:存进 localStorage。查看收藏夹的界面还没做,
+   但数据是真的存下来的,不会丢。 */
+const FAV_KEY = 'studyomni-favorites';
+function readFavorites() {
+  try {
+    const raw = localStorage.getItem(FAV_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function isFavorited() {
+  const key = AI.lastResult && (getSubject() + '|' + AI.lastResult);
+  return !!key && readFavorites().some(f => f.key === key);
+}
+function syncFavoriteBtn() {
+  const btn = document.getElementById('btnFavorite');
+  if (!btn) return;
+  const on = isFavorited();
+  btn.textContent = on ? '✅ 已收藏' : '📌 收藏题目';
+  btn.classList.toggle('is-on', on);
+}
+function toggleFavorite() {
+  if (!AI.lastResult) { toast('还没有解析结果可收藏'); return; }
+  const key = getSubject() + '|' + AI.lastResult;
+  let list = readFavorites();
+  const at = list.findIndex(f => f.key === key);
+  if (at >= 0) {
+    list.splice(at, 1);
+    toast('已取消收藏');
+  } else {
+    list.push({ key, subject: getSubject(), content: AI.lastResult, source: AI.lastSource, at: Date.now() });
+    list = list.slice(-50);          // 只留最近 50 条,别把 localStorage 撑爆
+    toast('已收藏(共 ' + list.length + ' 题)');
+  }
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch (e) {}
+  syncFavoriteBtn();
+}
+
+/* 分享:优先用系统分享面板(移动端),桌面上退回复制链接 */
+async function sharePage() {
+  const url = location.href;
+  const data = { title: 'StudyOmni · 多模态教学智能体', text: '上传题目图片即可获得即时讲解', url };
+  if (navigator.share) {
+    try { await navigator.share(data); return; } catch (e) { /* 用户取消或不可用,继续走复制 */ }
+  }
+  if (await writeClipboard(url)) { toast('页面链接已复制'); return; }
+  toast('复制失败,请手动复制地址栏链接');
+}
+
+/* 「开始答疑」:把焦点送到输入框。这是个导航按钮,不该什么都不做 */
+function focusAsk() {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  input.focus();
+  const box = document.getElementById('chatMessages');
+  if (box) box.scrollTop = box.scrollHeight;
+  if (!AI.lastResult) toast('先上传一道题,或者在下面直接问我');
+}
+
+/* 把上面这些接到按钮上。缺了某个元素也不报错,只是少接一个 */
+(function bindResultActions() {
+  const on = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', fn);
+  };
+  on('btnCopyResult', copyResult);
+  on('btnReparse', reparse);
+  on('btnFavorite', toggleFavorite);
+  on('btnShare', sharePage);
+  on('btnAsk', focusAsk);
+})();
 
 /* 把解析结果渲染到中栏,并关掉空态 */
 function renderResult({ content, subject, source, kind }) {
@@ -4385,6 +4455,8 @@ function bindRemove(item) {
     setTimeout(() => {
       item.remove();
       updateFileCount();
+      // 移除的正是最近解析的那个文件 -> 断掉「重新解析」的指向
+      if (AI.lastItem === item) { AI.lastItem = null; AI.lastFile = null; }
     }, 200);
   });
 }
@@ -4394,6 +4466,8 @@ document.querySelectorAll('.file-item').forEach(bindRemove);
 function updateFileCount() {
   fileCount.textContent = fileList.children.length;
 }
+// 初始化时对一次账:HTML 里写的数字只是占位,真实数量以实际列表为准
+updateFileCount();
 
 function clearFiles() {
   fileList.innerHTML = '';
@@ -4401,10 +4475,17 @@ function clearFiles() {
   // 素材没了,上下文和中栏都要回到初始状态
   AI.material = null;
   AI.history = [];
+  // 解析相关的记录一并清掉,否则「重新解析」会指向一个已不存在的文件
+  AI.lastResult = '';
+  AI.lastSource = '';
+  AI.lastKind = '';
+  AI.lastFile = null;
+  AI.lastItem = null;
   const box = document.getElementById('resultContent');
   const empty = document.getElementById('emptyState');
   if (box) { box.classList.remove('active'); box.innerHTML = ''; }
   if (empty) empty.style.display = '';
+  syncFavoriteBtn();
 }
 
 /* ---- 学科选择器:自定义玻璃下拉 ---- */
