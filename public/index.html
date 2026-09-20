@@ -209,6 +209,39 @@
       radial-gradient(1000px 320px at 50% -8%, rgba(255, 255, 255, .62), transparent 72%),
       radial-gradient(140% 108% at 50% 48%, transparent 56%, rgba(15, 23, 42, .075) 100%);
   }
+  /* ===== 用户自定义背景 =====
+     放在 .ambient 的最底层(第一个子元素),极光与光斑仍叠在它上面;
+     但照片上再叠彩色光斑会糊成一片,所以开启时把它们压暗(见下面 data-bg 段)。 */
+  .user-bg {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background-image: var(--user-bg, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(.94);
+  }
+  :root[data-bg="on"] .user-bg { display: block; }
+  /* 一层柔和遮罩:保证玻璃面板上的文字在任意照片上都还读得清 */
+  .user-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(255, 255, 255, .38) 0%,
+      rgba(255, 255, 255, .24) 42%,
+      rgba(255, 255, 255, .46) 100%);
+  }
+  [data-theme="dark"] .user-bg::after {
+    background: linear-gradient(180deg,
+      rgba(8, 11, 20, .54) 0%,
+      rgba(8, 11, 20, .42) 42%,
+      rgba(8, 11, 20, .64) 100%);
+  }
+  /* 有自定义背景时压掉光斑与极光 —— 它们本来是为渐变底设计的 */
+  :root[data-bg="on"] .orb { opacity: .16; }
+  :root[data-bg="on"] .aurora { opacity: .10; }
+
   .orb {
     position: absolute;
     border-radius: 50%;
@@ -2345,6 +2378,191 @@
       0 1px 4px rgba(0, 0, 0, .5);
   }
 
+  /* 「更多」:点开自定义取色器。圆点跟着当前自定义色走,
+     没选过就显示一圈彩虹示意"可以自己挑" */
+  .swatch-more .swatch-dot {
+    background: var(--sw, conic-gradient(
+      from 210deg, #f43f5e, #f59e0b, #10b981, #06b6d4, #6366f1, #a855f7, #f43f5e));
+  }
+  .swatch-more[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--sw, var(--primary)); }
+
+  /* 背景那一行的两个小按钮 */
+  .bg-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  .btn-mini {
+    appearance: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), .38);
+    background: rgba(var(--primary-rgb), .10);
+    color: var(--primary);
+    font-size: calc(12px * var(--font-scale, 1));
+    font-weight: 600;
+    transition: background var(--dur) var(--ease-out),
+                transform var(--dur) var(--ease-spring);
+  }
+  .btn-mini:hover { background: rgba(var(--primary-rgb), .18); transform: translateY(-1px); }
+  .btn-mini:active { transform: translateY(0) scale(.96); }
+  .btn-mini-ghost {
+    border-color: var(--border);
+    background: var(--hover);
+    color: var(--text-secondary);
+  }
+  .btn-mini-ghost:hover { background: var(--hover); border-color: var(--border-strong); }
+  .btn-mini[disabled] { opacity: .45; cursor: default; transform: none; }
+
+  /* ===== 通用弹窗(自定义主题色 / 上传背景共用) =====
+     沿用设置抽屉的浮层写法:关闭时 visibility:hidden + 不吃事件,
+     避免看不见的层挡住底下的拖拽手柄 */
+  .modal-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .modal-layer.open { visibility: visible; pointer-events: auto; }
+  .modal-scrim {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, .34);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity var(--dur-slow) var(--ease-out);
+  }
+  [data-theme="dark"] .modal-scrim { background: rgba(0, 0, 0, .56); }
+  .modal-layer.open .modal-scrim { opacity: 1; }
+  .modal {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: calc(100dvh - 40px);
+    display: flex; flex-direction: column;
+    border-radius: var(--radius-lg, 18px);
+    background: linear-gradient(160deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .96));
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, .88);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .22), inset 1px 1px 1px rgba(255, 255, 255, .9);
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur-slow) var(--ease-spring);
+    outline: none;
+  }
+  [data-theme="dark"] .modal {
+    background: linear-gradient(160deg, rgba(30, 41, 59, .97), rgba(15, 23, 42, .96));
+    border-color: rgba(255, 255, 255, .12);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .5), inset 1px 1px 1px rgba(255, 255, 255, .08);
+  }
+  .modal-layer.open .modal { opacity: 1; transform: translateY(0) scale(1); }
+  .modal-head {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: calc(15px * var(--font-scale, 1)); font-weight: 700; }
+  .modal-body {
+    padding: 16px 17px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-foot {
+    flex-shrink: 0;
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 13px 17px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 取色器 */
+  .picker-row { display: flex; align-items: center; gap: 14px; }
+  .picker-preview {
+    width: 62px; height: 62px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, .7);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .18), inset 0 1px 2px rgba(255, 255, 255, .5);
+    background: var(--pk, var(--primary));
+    flex-shrink: 0;
+    transition: background var(--dur) var(--ease-out);
+  }
+  .picker-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .picker-hex {
+    width: 100%;
+    padding: 8px 11px;
+    border-radius: var(--radius-sm, 10px);
+    border: 1px solid var(--border);
+    background: var(--surface-2, #fafafb);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: calc(13px * var(--font-scale, 1));
+  }
+  .picker-hex:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--ring-focus); }
+  .picker-hex.bad { border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244, 63, 94, .16); }
+  .picker-note { font-size: calc(11.5px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  .picker-presets { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+  .picker-preset {
+    appearance: none;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: none;
+    background: var(--pc);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .45), 0 1px 3px rgba(15, 23, 42, .22);
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .picker-preset:hover { transform: scale(1.18); }
+  .picker-preset:active { transform: scale(.92); }
+  .picker-preset[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--pc);
+  }
+
+  /* 背景上传 */
+  .bg-drop {
+    position: relative;
+    min-height: 132px;
+    border-radius: var(--radius-md, 14px);
+    border: 1.5px dashed var(--border-strong);
+    background: var(--surface-2, #fafafb);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  }
+  .bg-drop:hover, .bg-drop.dragover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), .07);
+  }
+  .bg-drop-title { font-size: calc(13px * var(--font-scale, 1)); font-weight: 600; }
+  .bg-drop-hint { font-size: calc(11.5px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  .bg-drop.has-image { border-style: solid; padding: 0; min-height: 0; }
+  .bg-drop.has-image img {
+    width: 100%; max-height: 190px; object-fit: cover;
+    border-radius: var(--radius-md, 14px);
+    display: block;
+  }
+  .bg-extract {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm, 10px);
+    background: rgba(var(--primary-rgb), .08);
+    border: 1px solid rgba(var(--primary-rgb), .22);
+  }
+  .bg-extract-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--ex, var(--primary));
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, .5), 0 2px 8px rgba(15, 23, 42, .2);
+    flex-shrink: 0;
+  }
+  .bg-extract-text { font-size: calc(12px * var(--font-scale, 1)); color: var(--text-secondary); }
+  .bg-extract-text b { color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .bg-current {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--text-secondary);
+  }
+
 
   /* ---- 分段控件 ---- */
   .seg {
@@ -2926,7 +3144,7 @@
 
   /* ===== 主题色调色板(默认绿色,:root 即 green)===== */
   :root[data-brand="green"]  { --primary:#10b981; --primary-hover:#059669; --primary-2:#34d399; --primary-rgb:16,185,129; --primary-2-rgb:52,211,153; --primary-tint:#6ee7b7; --primary-tint-rgb:110,231,183; --primary-2-tint:#a7f3d0; --primary-2-tint-rgb:167,243,208; --primary-tint-2:#a7f3d0; }
-  :root[data-brand="indigo"] { --primary:#6366f1; --primary-hover:#4f46e5; --primary-2:#8b5cf6; --primary-rgb:99,102,241; --primary-2-rgb:139,92,246; --primary-tint:#a5b4fc; --primary-tint-rgb:129,140,248; --primary-2-tint:#a78bfa; --primary-2-tint-rgb:167,139,250; --primary-tint-2:#c7d2fe; }
+  :root[data-brand="indigo"] { --primary:#6366f1; --primary-hover:#4f46e5; --primary-2:#8b5cf6; --primary-rgb:99,102,241; --primary-2-rgb:139,92,246; --primary-tint:#a5b4fc; --primary-tint-rgb:165,180,252; --primary-2-tint:#a78bfa; --primary-2-tint-rgb:167,139,250; --primary-tint-2:#c7d2fe; }
   :root[data-brand="blue"]   { --primary:#3b82f6; --primary-hover:#2563eb; --primary-2:#60a5fa; --primary-rgb:59,130,246; --primary-2-rgb:96,165,250; --primary-tint:#93c5fd; --primary-tint-rgb:147,197,253; --primary-2-tint:#bfdbfe; --primary-2-tint-rgb:191,219,254; --primary-tint-2:#bfdbfe; }
   :root[data-brand="violet"] { --primary:#8b5cf6; --primary-hover:#7c3aed; --primary-2:#a78bfa; --primary-rgb:139,92,246; --primary-2-rgb:167,139,250; --primary-tint:#c4b5fd; --primary-tint-rgb:196,181,253; --primary-2-tint:#ddd6fe; --primary-2-tint-rgb:221,214,254; --primary-tint-2:#ddd6fe; }
   :root[data-brand="rose"]   { --primary:#f43f5e; --primary-hover:#e11d48; --primary-2:#fb7185; --primary-rgb:244,63,94; --primary-2-rgb:251,113,133; --primary-tint:#fda4af; --primary-tint-rgb:253,164,175; --primary-2-tint:#fecdd3; --primary-2-tint-rgb:254,205,211; --primary-tint-2:#fecdd3; }
@@ -2964,6 +3182,111 @@
   }
 </style>
 <script>
+  /* 主题配色算法 —— 由「一个基色」推导出整套 CSS 变量。
+     自定义主题色 / 从背景图提取主色都要用它,所以定义在首屏脚本里
+     并挂到 window,后面主脚本直接复用(避免同一套数学写两遍)。 */
+  window.StudyBrand = (function () {
+    var clampN = function (n, lo, hi) { return Math.max(lo, Math.min(hi, n)); };
+
+    function parseHex(hex) {
+      var s = String(hex == null ? '' : hex).trim().replace(/^#/, '');
+      if (!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s)) return null;
+      if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+      return { r: parseInt(s.slice(0, 2), 16), g: parseInt(s.slice(2, 4), 16), b: parseInt(s.slice(4, 6), 16) };
+    }
+    function toHex(r, g, b) {
+      function h(n) { return ('0' + clampN(Math.round(n), 0, 255).toString(16)).slice(-2); }
+      return '#' + h(r) + h(g) + h(b);
+    }
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+      var l = (mx + mn) / 2;
+      if (d === 0) return { h: 0, s: 0, l: l };
+      var s = d / (1 - Math.abs(2 * l - 1));
+      var h;
+      if (mx === r) h = 60 * (((g - b) / d) % 6);
+      else if (mx === g) h = 60 * ((b - r) / d + 2);
+      else h = 60 * ((r - g) / d + 4);
+      if (h < 0) h += 360;
+      return { h: h, s: s, l: l };
+    }
+    function hslToRgb(h, s, l) {
+      h = ((h % 360) + 360) % 360; s = clampN(s, 0, 1); l = clampN(l, 0, 1);
+      var c = (1 - Math.abs(2 * l - 1)) * s;
+      var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      var m = l - c / 2;
+      var t = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+            : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+      return { r: (t[0] + m) * 255, g: (t[1] + m) * 255, b: (t[2] + m) * 255 };
+    }
+    var rgbTriplet = function (c) {
+      return Math.round(clampN(c.r, 0, 255)) + ',' + Math.round(clampN(c.g, 0, 255)) + ',' + Math.round(clampN(c.b, 0, 255));
+    };
+
+    /* 由任意基色推导整套变量。
+       步长是照着内置的六套主题反推出来的(以 green 为例:
+       primary 39% → hover 30%、primary-2 52%、tint 67%、2-tint 80%),
+       换成别的色相也能保持同样的明暗关系。 */
+    function vars(hex) {
+      var base = parseHex(hex);
+      if (!base) return null;
+      var c = rgbToHsl(base.r, base.g, base.b);
+      // 太亮/太暗的基色当强调色会看不清,先夹到可用区间。
+      // 区间按内置六套的实测亮度定:绿 0.394 / 青 0.428 / 蓝 0.598 /
+      // 玫红 0.602 / 紫 0.663 / 靛蓝 0.667 —— 上限必须 >= 0.667,
+      // 设成 0.66 的话用户选中靛蓝会被悄悄改暗(踩过一次)。
+      // 饱和度同理,六套实测落在 0.835 ~ 0.945。
+      var l = clampN(c.l, 0.36, 0.68);
+      var s = clampN(c.s, 0.35, 0.96);
+      var mk = function (dl, ds) {
+        var o = hslToRgb(c.h, clampN(s + ds, 0.12, 1), clampN(l + dl, 0.06, 0.94));
+        return { hex: toHex(o.r, o.g, o.b), rgb: rgbTriplet(o) };
+      };
+      // 基色本来就在可用区间内时原样保留,不走 HSL 往返 ——
+      // 往返会丢 1~3/255 的精度(#6366f1 会变成 #6063f1),
+      // 用户选了什么色就该得到什么色。
+      var primary = (l === c.l && s === c.s)
+        ? { hex: toHex(base.r, base.g, base.b), rgb: rgbTriplet(base) }
+        : mk(0, 0);
+      var hover = mk(-0.08, 0.04);
+      var second = mk(0.13, -0.18);
+      var tint = mk(0.27, -0.10);
+      var tint2 = mk(0.41, -0.06);
+      return {
+        '--primary': primary.hex,
+        '--primary-hover': hover.hex,
+        '--primary-2': second.hex,
+        '--primary-rgb': primary.rgb,
+        '--primary-2-rgb': second.rgb,
+        '--primary-tint': tint.hex,
+        '--primary-tint-rgb': tint.rgb,
+        '--primary-2-tint': tint2.hex,
+        '--primary-2-tint-rgb': tint2.rgb,
+        '--primary-tint-2': tint2.hex
+      };
+    }
+
+    /* 应用到 <html>:自定义色用内联 style(优先级高于 CSS 规则),
+       切回内置主题时要把这些内联变量清掉,否则会一直盖着。 */
+    var CUSTOM_KEYS = null;
+    function apply(root, brand, color) {
+      if (!CUSTOM_KEYS) CUSTOM_KEYS = Object.keys(vars('#10b981'));
+      var v = brand === 'custom' ? vars(color) : null;
+      if (v) {
+        CUSTOM_KEYS.forEach(function (k) { root.style.setProperty(k, v[k]); });
+        root.setAttribute('data-brand', 'custom');
+        return;
+      }
+      CUSTOM_KEYS.forEach(function (k) { root.style.removeProperty(k); });
+      // 自定义色缺失或非法时**不能**把 data-brand 留成 'custom' ——
+      // 那样没有任何 CSS 规则命中,页面会掉回 :root 的默认配色,
+      // 而属性还在说"我是自定义"。内置名由调用方保证合法。
+      root.setAttribute('data-brand', brand === 'custom' || !brand ? 'green' : brand);
+    }
+    return { parseHex: parseHex, toHex: toHex, rgbToHsl: rgbToHsl, hslToRgb: hslToRgb, vars: vars, apply: apply };
+  })();
+
   /* 设置预初始化:在首屏渲染前把主题 / 字号 / 密度 / 动效 / 栏宽一次性铺好,
      避免首帧闪一下再变(深色用户看到白屏、调过字号的人看到字号跳变)。
      主题取值:light | dark | auto(跟随系统)。旧版只存 light/dark,这里兼容。 */
@@ -2983,15 +3306,22 @@
 
       // --- 其余偏好(存在单个 JSON 里,便于导出) ---
       var raw = localStorage.getItem('studyomni-settings');
+      var st = null;
       if (raw) {
-        var st = JSON.parse(raw);
+        st = JSON.parse(raw);
         if (st.fontSize) root.style.setProperty('--font-scale', (st.fontSize / 14).toFixed(4));
         if (st.density === 'compact') root.setAttribute('data-density', 'compact');
         if (st.motion === 'off') root.setAttribute('data-motion', 'off');
-        root.setAttribute('data-brand', st.brand || 'green');
         if (st.col1) root.style.setProperty('--col-1', st.col1 + 'px');
         if (st.col3) root.style.setProperty('--col-3', st.col3 + 'px');
       }
+      // 主题色:内置六套走 CSS 规则,自定义色需要算出整套变量
+      window.StudyBrand.apply(root, (st && st.brand) || 'green', st && st.brandColor);
+
+      // --- 用户背景图(单独存,不混进设置 JSON,免得导出文件变大) ---
+      var bg = localStorage.getItem('studyomni-bg');
+      if (bg) root.style.setProperty('--user-bg', 'url("' + bg + '")');
+      if (bg) root.setAttribute('data-bg', 'on');
     } catch (e) {}
   })();
 </script>
@@ -3016,6 +3346,7 @@
 
 <!-- ===== 氛围光斑:玻璃折射的内容来源 ===== -->
 <div class="ambient" aria-hidden="true">
+  <span class="user-bg" id="userBg"></span>
   <span class="aurora"></span>
   <span class="orb orb-1"></span>
   <span class="orb orb-2"></span>
@@ -3414,6 +3745,76 @@
             role="separator" aria-orientation="vertical" tabindex="0"
             aria-label="拖拽调整「AI 答疑」栏宽度" title="拖拽调整宽度 · 双击恢复默认"></button>
 
+<!-- ===== 弹窗:自定义主题色 =====
+     单独一层,z-index 高于设置抽屉,所以能在抽屉之上弹出 -->
+<div class="modal-layer" id="colorLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="colorTitle" tabindex="-1" id="colorModal">
+    <div class="modal-head">
+      <span class="modal-title" id="colorTitle">自定义主题色</span>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="picker-row">
+        <button type="button" class="picker-preview" id="pickerPreview"
+                aria-label="打开系统取色器"></button>
+        <div class="picker-fields">
+          <input type="text" class="picker-hex" id="pickerHex" spellcheck="false"
+                 autocomplete="off" maxlength="7" aria-label="十六进制颜色值" />
+          <span class="picker-note" id="pickerNote">改完可以直接看页面上的效果</span>
+        </div>
+      </div>
+      <div>
+        <span class="picker-note">快捷色</span>
+        <div class="picker-presets" id="pickerPresets" style="margin-top:7px"></div>
+      </div>
+      <input type="color" id="pickerNative" aria-label="系统取色器" hidden />
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
+      <button type="button" class="btn-mini" id="pickerApply">应用</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 弹窗:上传背景 ===== -->
+<div class="modal-layer" id="bgLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bgTitle" tabindex="-1" id="bgModal">
+    <div class="modal-head">
+      <span class="modal-title" id="bgTitle">上传背景</span>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="bg-drop" id="bgDrop" role="button" tabindex="0">
+        <span class="bg-drop-title">点击选择一张图片</span>
+        <span class="bg-drop-hint">也可以拖拽进来,或直接 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴</span>
+      </div>
+      <div class="bg-extract" id="bgExtract" hidden>
+        <span class="bg-extract-dot" id="bgExtractDot"></span>
+        <span class="bg-extract-text">识别到的主色 <b id="bgExtractHex">—</b>,应用后会设为主题色</span>
+      </div>
+      <div class="bg-current">
+        <span id="bgStatus">当前:默认渐变</span>
+        <button type="button" class="btn-mini btn-mini-ghost" id="bgRemove" hidden>移除背景</button>
+      </div>
+      <input type="file" id="bgFile" accept="image/*" hidden />
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
+      <button type="button" class="btn-mini" id="bgApply" disabled>应用</button>
+    </div>
+  </div>
+</div>
+
     <!-- Left: Upload -->
     <section class="panel is-active" data-pane="upload" aria-label="素材上传">
       <div class="panel-header">
@@ -3616,7 +4017,7 @@
         <div class="settings-row">
           <div class="settings-label">
             <span class="settings-label-main">主题色</span>
-            <span class="settings-label-desc">界面与光晕的强调色,默认绿色</span>
+            <span class="settings-label-desc" id="brandDesc">界面与光晕的强调色,默认绿色</span>
           </div>
           <div class="swatch-group" id="swatchBrand" role="radiogroup" aria-label="主题色">
             <button type="button" class="swatch-item" data-value="green" role="radio"
@@ -3631,6 +4032,20 @@
                     aria-checked="false" title="玫红" aria-label="玫红" style="--sw:#f43f5e"><span class="swatch-dot"></span></button>
             <button type="button" class="swatch-item" data-value="cyan" role="radio"
                     aria-checked="false" title="青蓝" aria-label="青蓝" style="--sw:#06b6d4"><span class="swatch-dot"></span></button>
+            <button type="button" class="swatch-item swatch-more" data-value="custom" role="radio"
+                    aria-checked="false" title="更多 · 自定义颜色" aria-label="更多,自定义主题色"
+                    id="swatchMore"><span class="swatch-dot"></span></button>
+          </div>
+        </div>
+
+        <div class="settings-row settings-row-block">
+          <div class="settings-label">
+            <span class="settings-label-main">背景</span>
+            <span class="settings-label-desc" id="bgDesc">默认渐变。上传一张图会自动把主题色换成适配它的颜色</span>
+          </div>
+          <div class="bg-actions">
+            <button type="button" class="btn-mini" id="btnUploadBg">上传背景</button>
+            <button type="button" class="btn-mini btn-mini-ghost" id="btnClearBg">恢复默认</button>
           </div>
         </div>
 
@@ -5220,6 +5635,9 @@ function acceptedOnly(files) {
 }
 
 document.addEventListener('paste', e => {
+  // 背景上传弹窗开着时,粘进来的图应当当背景,而不是当成学习素材加入列表
+  if (window.StudyBg && window.StudyBg.tryPaste(e)) return;
+
   const all = filesFromClipboard(e.clipboardData);
   if (!all.length) return;              // 纯文本:放行,交给浏览器默认行为
 
@@ -5468,7 +5886,10 @@ const Settings = (function () {
   const root = document.documentElement;
 
   const DEFAULTS = {
+    // brand 是内置六套之一;选了自定义色时 brand === 'custom',
+    // 具体颜色存在 brandColor 里(两者配套,缺一就回退到 green)
     brand: 'green',
+    brandColor: '',
     fontSize: 14,
     density: 'comfortable',
     motion: 'on',
@@ -5494,6 +5915,15 @@ const Settings = (function () {
   let state = Object.assign({}, DEFAULTS);
   let theme = 'auto';
 
+  /* 颜色统一收敛成 6 位小写。手写的 #abc / #AABBCC / 大小写混写都归一,
+     否则导出文件里会出现好几种写法,来回导入还会漂移。
+     非法值一律清空(由 apply() 兜回内置主题)。 */
+  function canonColor(v) {
+    if (!window.StudyBrand) return v;
+    const c = window.StudyBrand.parseHex(v);
+    return c ? window.StudyBrand.toHex(c.r, c.g, c.b) : '';
+  }
+
   function readJSON() {
     try {
       const raw = localStorage.getItem(DATA_KEY);
@@ -5504,6 +5934,7 @@ const Settings = (function () {
         Object.keys(DEFAULTS).forEach(k => {
           if (saved[k] !== undefined) state[k] = saved[k];
         });
+        state.brandColor = canonColor(state.brandColor);
       }
     } catch (e) {}
     try {
@@ -5537,8 +5968,20 @@ const Settings = (function () {
     else root.removeAttribute('data-density');
     if (state.motion === 'off') root.setAttribute('data-motion', 'off');
     else root.removeAttribute('data-motion');
-    if (BRANDS.indexOf(state.brand) < 0) state.brand = 'green';
-    root.setAttribute('data-brand', state.brand);
+    // 品牌:内置六套走 CSS 规则;自定义色要算出整套 --primary* 变量。
+    // 用 head 里定义好的 StudyBrand,避免配色数学在两处各写一遍。
+    if (state.brand === 'custom') {
+      // 自定义色必须有效,缺了或格式不对就退回绿色 —— 否则整套变量都没值,页面会失色
+      if (!window.StudyBrand || !window.StudyBrand.vars(state.brandColor)) {
+        state.brand = 'green';
+        state.brandColor = '';
+      }
+    } else if (BRANDS.indexOf(state.brand) < 0) {
+      state.brand = 'green';
+    }
+    if (window.StudyBrand) window.StudyBrand.apply(root, state.brand, state.brandColor);
+    else root.setAttribute('data-brand', state.brand);
+    setBrandSwatch();
     // 旧版本存的是 'omni-pro' 这类已废弃的档位名,或者导入的文件里写了别的值 ——
     // 兜回默认档,否则界面会没有任何一项选中
     if (TIERS.indexOf(state.tier) < 0) state.tier = DEFAULTS.tier;
@@ -5612,6 +6055,21 @@ const Settings = (function () {
       b.setAttribute('aria-checked', b.dataset.value === val ? 'true' : 'false');
     });
   }
+  /* 主题色那一排:六个预设 + 一个「更多」。
+     「更多」的圆点要显示当前自定义色,没选过就留彩虹渐变(见 CSS 的 --sw 兜底)。 */
+  function setBrandSwatch() {
+    setSwatch('swatchBrand', state.brand);
+    const more = document.getElementById('swatchMore');
+    if (!more) return;
+    if (state.brand === 'custom' && state.brandColor) more.style.setProperty('--sw', state.brandColor);
+    else more.style.removeProperty('--sw');
+    const desc = document.getElementById('brandDesc');
+    if (desc) {
+      desc.textContent = state.brand === 'custom'
+        ? '自定义 ' + state.brandColor.toUpperCase()
+        : '界面与光晕的强调色,默认绿色';
+    }
+  }
 
   /* ---- 绑定:分段控件(事件委托,后续加选项不用改 JS) ---- */
   function bindSeg(groupId, key, onApply) {
@@ -5678,7 +6136,14 @@ const Settings = (function () {
     g.addEventListener('click', e => {
       const btn = e.target.closest('.swatch-item');
       if (!btn) return;
+      // 「更多」不是直接选色,而是打开取色器 —— 真正的赋值在弹窗里做
+      if (btn.dataset.value === 'custom' && key === 'brand') {
+        if (window.StudyColorPicker) window.StudyColorPicker.open();
+        return;
+      }
       state[key] = btn.dataset.value;
+      // 切回内置主题时把自定义色清掉,免得下次再选 custom 时冒出旧颜色
+      if (key === 'brand') state.brandColor = '';
       saveSettings();
       apply();
       root.dispatchEvent(new CustomEvent('settingschange', { bubbles: true, detail:{ key, value: btn.dataset.value, state: getState() } }));
@@ -5710,7 +6175,9 @@ const Settings = (function () {
        3. 数字字段可能是字符串(分段控件的 data-value 就是 "10"),
           先按数字形态转回来再校验。 */
   const RULES = {
-    brand:        v => BRANDS.indexOf(v) >= 0,
+    // brand 可以是内置六套之一,也可以是 'custom'(配 brandColor 用)
+    brand:        v => v === 'custom' || BRANDS.indexOf(v) >= 0,
+    brandColor:   v => typeof v === 'string' && (v === '' || /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim())),
     fontSize:     v => typeof v === 'number' && v >= 12 && v <= 18,
     density:      v => v === 'comfortable' || v === 'compact',
     motion:       v => v === 'on' || v === 'off',
@@ -5750,6 +6217,10 @@ const Settings = (function () {
       saveTheme();
       themeOk = true;
     }
+
+    // 规范化要在 saveSettings **之前**做 —— 否则存下去的还是原始写法,
+    // 下次导出的文件就又变成另一种形态(踩过:saveSettings 在 apply 之前)
+    state.brandColor = canonColor(state.brandColor);
 
     if (applied.length) saveSettings();
     applyTheme();
@@ -5817,6 +6288,21 @@ const Settings = (function () {
       saveSettings();
       apply();
     },
+    /* 设置主题色。brand 传 'custom' 时 colour 必须是合法十六进制;
+       传内置名时 colour 留空。由取色器 / 背景上传调用。 */
+    setBrand: function (brand, colour) {
+      state.brand = brand;
+      state.brandColor = brand === 'custom' ? canonColor(colour) : '';
+      saveSettings();
+      apply();
+      root.dispatchEvent(new CustomEvent('settingschange', {
+        bubbles: true, detail: { key: 'brand', value: brand, state: getState() }
+      }));
+    },
+    /* 只改 DOM 不落盘 —— 取色器拖动时做实时预览用 */
+    previewBrand: function (brand, colour) {
+      if (window.StudyBrand) window.StudyBrand.apply(root, brand, colour);
+    },
     reset: function () {
       state = Object.assign({}, DEFAULTS);
       theme = 'auto';
@@ -5824,11 +6310,399 @@ const Settings = (function () {
       saveTheme();
       applyTheme();
       apply();
+      // 背景图单独存,也要一起清掉
+      if (window.StudyBg) window.StudyBg.clear();
     },
     isDark: function () {
       return root.getAttribute('data-theme') === 'dark';
     }
   };
+})();
+/* 顶层 `const Settings = ...` **不会**自动挂到 window 上,
+   别的模块写 `window.Settings` 会拿到 undefined(踩过一次:
+   取色器的实时预览与"应用"因此全部静默失效)。这里显式挂出去。 */
+window.Settings = Settings;
+
+/* ==================== 自定义主题色 + 上传背景 ====================
+   两个弹窗共用一套浮层样式与开合逻辑。
+   背景图**单独存**在 localStorage['studyomni-bg'],不混进设置 JSON ——
+   一张压缩后的图动辄几百 KB,塞进去会让导出文件变得没法看。 */
+(function () {
+  const root = document.documentElement;
+  const B = window.StudyBrand;
+  const BG_KEY = 'studyomni-bg';
+  const MAX_SRC = 20 * 1024 * 1024;   // 原图上限,再大就该让用户先压一下
+  const MAX_STORE = 1.6 * 1024 * 1024; // 存进 localStorage 的上限(一般为 5MB)
+
+  /* ---- 通用弹窗 ----
+     onClose 回调必须走这里,不能在外面覆盖返回的 close ——
+     层内的关闭按钮 / 遮罩 / Esc 都调的是闭包里那个函数,
+     外挂覆盖会被绕过(取消时还原颜色因此失效,踩过一次)。 */
+  function makeModal(layerId, modalId, onClose) {
+    const layer = document.getElementById(layerId);
+    const modal = document.getElementById(modalId);
+    if (!layer) return null;
+    let lastFocus = null;
+    const isOpen = () => layer.classList.contains('open');
+    function open() {
+      lastFocus = document.activeElement;
+      layer.classList.add('open');
+      layer.setAttribute('aria-hidden', 'false');
+      // 等过渡开始再聚焦,免得 Safari 把滚动位置带跑
+      setTimeout(() => { if (modal) modal.focus(); }, 60);
+    }
+    function close() {
+      if (onClose) onClose();
+      layer.classList.remove('open');
+      layer.setAttribute('aria-hidden', 'true');
+      if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (err) {} }
+    }
+    layer.addEventListener('click', e => {
+      if (e.target.closest('[data-modal-close]')) close();
+    });
+    layer.addEventListener('keydown', e => {
+      if (e.key === 'Escape') close();
+    });
+    return { layer, modal, open, close, isOpen };
+  }
+
+  /* ==================== 一、自定义主题色 ==================== */
+  const colorModal = makeModal('colorLayer', 'colorModal', function () {
+    // 取消 / 点遮罩 / Esc 都要把预览还原 —— 否则关了弹窗颜色却留在那儿
+    if (!applied && revert && window.Settings) {
+      window.Settings.previewBrand(revert.brand, revert.color);
+    }
+  });
+  const previewEl = document.getElementById('pickerPreview');
+  const hexEl = document.getElementById('pickerHex');
+  const noteEl = document.getElementById('pickerNote');
+  const nativeEl = document.getElementById('pickerNative');
+  const presetsEl = document.getElementById('pickerPresets');
+
+  const PRESETS = ['#10b981', '#34d399', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7',
+                   '#d946ef', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16'];
+
+  let draft = '';      // 弹窗里正在编辑的颜色
+  let revert = null;   // 打开前的 { brand, color },取消时还原
+  let applied = false; // 已点「应用」—— 关闭时就不要再还原了
+
+  function normalise(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (!s) return null;
+    const withHash = s.startsWith('#') ? s : '#' + s;
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(withHash)) return null;
+    // 统一成 6 位,后面比较和存储都用一种形态
+    let hex = withHash.slice(1);
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    return '#' + hex.toLowerCase();
+  }
+
+  function paintDraft(hex, keepInput) {
+    draft = hex;
+    if (previewEl) previewEl.style.setProperty('--pk', hex);
+    if (!keepInput && hexEl) hexEl.value = hex.toUpperCase();
+    if (hexEl) hexEl.classList.remove('bad');
+    if (nativeEl) nativeEl.value = hex;
+    if (presetsEl) {
+      presetsEl.querySelectorAll('.picker-preset').forEach(b => {
+        b.setAttribute('aria-pressed', b.dataset.color === hex ? 'true' : 'false');
+      });
+    }
+    // 实时预览:直接改 DOM 变量,不落盘(取消时要能还原)
+    if (window.Settings) window.Settings.previewBrand('custom', hex);
+  }
+
+  if (colorModal) {
+    if (presetsEl) {
+      PRESETS.forEach(hex => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'picker-preset';
+        b.dataset.color = hex;
+        b.style.setProperty('--pc', hex);
+        b.setAttribute('aria-pressed', 'false');
+        b.setAttribute('aria-label', hex);
+        b.title = hex;
+        b.addEventListener('click', () => paintDraft(hex));
+        presetsEl.appendChild(b);
+      });
+    }
+
+    if (hexEl) {
+      hexEl.addEventListener('input', () => {
+        const v = normalise(hexEl.value);
+        if (!v) { hexEl.classList.add('bad'); return; }
+        paintDraft(v, true);
+      });
+      hexEl.addEventListener('blur', () => {
+        // 失焦时把输入框规范成标准形态(补 #、补成 6 位)
+        const v = normalise(hexEl.value);
+        if (v) paintDraft(v);
+      });
+    }
+    // 点大色块 = 打开系统取色器(带吸管的那个)
+    if (previewEl) previewEl.addEventListener('click', () => { if (nativeEl) nativeEl.click(); });
+    if (nativeEl) nativeEl.addEventListener('input', () => paintDraft(normalise(nativeEl.value) || draft));
+
+    const applyBtn = document.getElementById('pickerApply');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        if (!window.Settings) return;
+        window.Settings.setBrand('custom', draft);
+        applied = true;          // 标记已应用,关闭时不要再还原
+        colorModal.close();
+        toast('主题色已设为 ' + draft.toUpperCase());
+      });
+    }
+
+    window.StudyColorPicker = {
+      open: function () {
+        const st = window.Settings ? window.Settings.getState() : {};
+        revert = { brand: st.brand || 'green', color: st.brandColor || '' };
+        applied = false;
+        // 起始颜色:已经自定义过就从上次接着调,否则从当前主色开始
+        let start = (st.brand === 'custom' && st.brandColor) ? st.brandColor : '';
+        if (!start) {
+          const cur = getComputedStyle(root).getPropertyValue('--primary').trim();
+          start = (B && B.parseHex(cur)) ? cur : '#10b981';
+        }
+        paintDraft(normalise(start) || '#10b981');
+        colorModal.open();
+      },
+      close: function () { colorModal.close(); }
+    };
+  }
+
+  /* ==================== 二、上传背景 ==================== */
+  const bgModal = makeModal('bgLayer', 'bgModal');
+  const dropEl = document.getElementById('bgDrop');
+  const fileEl = document.getElementById('bgFile');
+  const extractEl = document.getElementById('bgExtract');
+  const dotEl = document.getElementById('bgExtractDot');
+  const hexOutEl = document.getElementById('bgExtractHex');
+  const statusEl = document.getElementById('bgStatus');
+  const applyBtn = document.getElementById('bgApply');
+  const removeBtn = document.getElementById('bgRemove');
+  const descEl = document.getElementById('bgDesc');
+
+  let pending = null;   // { dataUrl, hex } —— 弹窗里选好但还没应用
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ''));
+      fr.onerror = () => reject(new Error('读取文件失败'));
+      fr.readAsDataURL(file);
+    });
+  }
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('图片解码失败'));
+      img.src = src;
+    });
+  }
+
+  /* 取主色:缩到 48×48 后按色相分桶,取像素最多的那一桶的平均色。
+     直接算全图平均值会被大面积白墙/天空带偏,分桶更接近人眼看到的"主色"。
+     近白、近黑、几乎无彩色的像素跳过 —— 它们不构成"颜色"。 */
+  function extractDominant(img) {
+    const S = 48;
+    const c = document.createElement('canvas');
+    c.width = S; c.height = S;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, S, S);
+    let data;
+    try { data = ctx.getImageData(0, 0, S, S).data; }
+    catch (err) { return null; }         // 跨域图会抛 SecurityError
+    const bins = new Map();
+    let total = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 125) continue;                       // 透明
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const hsl = B.rgbToHsl(r, g, b);
+      if (hsl.l > 0.92 || hsl.l < 0.08) continue;            // 近白 / 近黑
+      if (hsl.s < 0.14) continue;                            // 几乎无彩色
+      const key = Math.floor(hsl.h / 15);                    // 24 个色相桶
+      let e = bins.get(key);
+      if (!e) bins.set(key, e = { n: 0, r: 0, g: 0, b: 0 });
+      e.n++; e.r += r; e.g += g; e.b += b; total++;
+    }
+    if (!total) return null;
+    let best = null;
+    bins.forEach(e => { if (!best || e.n > best.n) best = e; });
+    return B.toHex(best.r / best.n, best.g / best.n, best.b / best.n);
+  }
+
+  /* 压到能存进 localStorage 的尺寸。
+     转 JPEG 前必须铺白底 —— 否则透明 PNG 的透明区会变成黑块。 */
+  async function toBackgroundDataUrl(file) {
+    const raw = await fileToDataUrl(file);
+    const img = await loadImage(raw);
+    const maxSide = 1600;
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    let q = 0.82;
+    let out = c.toDataURL('image/jpeg', q);
+    while (out.length > MAX_STORE && q > 0.5) {
+      q -= 0.12;
+      out = c.toDataURL('image/jpeg', q);
+    }
+    return { dataUrl: out, hex: extractDominant(img) };
+  }
+
+  function paintStatus() {
+    const cur = localStorage.getItem(BG_KEY);
+    if (statusEl) statusEl.textContent = cur ? '当前:自定义背景' : '当前:默认渐变';
+    if (removeBtn) removeBtn.hidden = !cur;
+    if (descEl) {
+      descEl.textContent = cur
+        ? '自定义背景。恢复默认会同时把主题色留在现在的自定义色上'
+        : '默认渐变。上传一张图会自动把主题色换成适配它的颜色';
+    }
+  }
+
+  function accept(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type || '')) { toast('请选择图片文件'); return; }
+    if (file.size > MAX_SRC) { toast('原图太大(上限 20MB),先压缩一下再传'); return; }
+    toBackgroundDataUrl(file).then(res => {
+      pending = res;
+      if (dropEl) {
+        dropEl.classList.add('has-image');
+        dropEl.innerHTML = '';
+        const im = document.createElement('img');
+        im.src = res.dataUrl;
+        im.alt = '待应用的背景预览';
+        dropEl.appendChild(im);
+      }
+      if (res.hex) {
+        if (extractEl) extractEl.hidden = false;
+        if (dotEl) dotEl.style.setProperty('--ex', res.hex);
+        if (hexOutEl) hexOutEl.textContent = res.hex.toUpperCase();
+      } else {
+        // 灰度图之类找不到主色,主题色保持不动
+        if (extractEl) extractEl.hidden = true;
+        toast('这张图里没找到明显的颜色,主题色保持不变');
+      }
+      if (applyBtn) applyBtn.disabled = false;
+    }).catch(err => {
+      toast('图片处理失败:' + (err && err.message ? err.message : err));
+    });
+  }
+
+  function resetDropZone() {
+    pending = null;
+    if (dropEl) {
+      dropEl.classList.remove('has-image');
+      dropEl.innerHTML =
+        '<span class="bg-drop-title">点击选择一张图片</span>' +
+        '<span class="bg-drop-hint">也可以拖拽进来,或直接 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴</span>';
+    }
+    if (extractEl) extractEl.hidden = true;
+    if (applyBtn) applyBtn.disabled = true;
+  }
+
+  if (bgModal) {
+    if (dropEl) {
+      dropEl.addEventListener('click', () => { if (fileEl) fileEl.click(); });
+      dropEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (fileEl) fileEl.click(); }
+      });
+    }
+    if (fileEl) {
+      fileEl.addEventListener('change', () => {
+        accept(fileEl.files && fileEl.files[0]);
+        fileEl.value = '';    // 清空才能连续选同一个文件
+      });
+    }
+    ['dragenter', 'dragover'].forEach(ev => {
+      if (dropEl) dropEl.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropEl.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+      if (dropEl) dropEl.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropEl.classList.remove('dragover');
+      });
+    });
+    if (dropEl) dropEl.addEventListener('drop', e => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) accept(f);
+    });
+
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        if (!pending) return;
+        let stored = true;
+        try { localStorage.setItem(BG_KEY, pending.dataUrl); }
+        catch (err) { stored = false; }
+        root.style.setProperty('--user-bg', 'url("' + pending.dataUrl + '")');
+        root.setAttribute('data-bg', 'on');
+        // 识别到主色就顺手把主题色换过去 —— 用户要的就是这个
+        let msg = '背景已应用';
+        if (pending.hex && window.Settings) {
+          window.Settings.setBrand('custom', pending.hex);
+          msg += ',主题色已换成 ' + pending.hex.toUpperCase();
+        }
+        if (!stored) msg += '(图片较大,刷新后会恢复默认背景)';
+        toast(msg);
+        paintStatus();
+        resetDropZone();
+        bgModal.close();
+      });
+    }
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+      window.StudyBg.clear();
+      paintStatus();
+      toast('已恢复默认背景');
+    });
+
+    window.StudyBg = {
+      open: function () {
+        resetDropZone();
+        paintStatus();
+        bgModal.open();
+      },
+      /* 供全局粘贴处理调用:弹窗开着时优先把剪贴板图片当背景,
+         否则会被"加入素材"那条逻辑抢走 */
+      tryPaste: function (e) {
+        if (!bgModal.isOpen()) return false;
+        const all = filesFromClipboard(e.clipboardData);
+        const img = all.filter(f => /^image\//.test(f.type || ''))[0];
+        if (!img) { toast('剪贴板里没有图片'); return true; }
+        e.preventDefault();
+        accept(img);
+        return true;
+      },
+      clear: function () {
+        try { localStorage.removeItem(BG_KEY); } catch (err) {}
+        root.style.removeProperty('--user-bg');
+        root.removeAttribute('data-bg');
+        paintStatus();
+      }
+    };
+
+    const btnUpload = document.getElementById('btnUploadBg');
+    if (btnUpload) btnUpload.addEventListener('click', () => window.StudyBg.open());
+    const btnClear = document.getElementById('btnClearBg');
+    if (btnClear) btnClear.addEventListener('click', () => {
+      window.StudyBg.clear();
+      toast('已恢复默认背景');
+    });
+
+    paintStatus();
+  }
 })();
 
 /* ---- 设置抽屉开合 ---- */
