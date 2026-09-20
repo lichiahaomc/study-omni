@@ -199,5 +199,77 @@ SIX.forEach(hex => {
      HTML.indexOf('[data-brand=') >= 0);
 });
 
+/* ---------- 弹窗必须在 .app 之外(层叠上下文) ----------
+   踩过的坑:把 .modal-layer 放进 .app 里,.app 有 position:relative + z-index:1
+   自成层叠上下文 —— 弹窗的 z-index 就只在 .app 内部有效,会被 body 层级的
+   设置抽屉(z-index:100)整个盖住。表现是「设置永远在最上层,弹窗糊在底下」。
+   这条只能在源码结构上守。 */
+section('弹窗层叠结构');
+
+// 从某个 <div 的起始位置,靠 div 配对找到它闭合的位置
+function divSpan(html, startIdx) {
+  const re = /<div\b|<\/div>/g;
+  re.lastIndex = startIdx;
+  let depth = 0, m;
+  while ((m = re.exec(html))) {
+    if (m[0] === '<div') depth++;
+    else {
+      depth--;
+      if (depth === 0) return { start: startIdx, end: m.index + '</div>'.length };
+    }
+  }
+  return null;
+}
+
+const appStart = HTML.indexOf('<div class="app">');
+ok('.app 存在', appStart >= 0, appStart);
+const appSpan = divSpan(HTML, appStart);
+ok('.app 能配平闭合', !!appSpan, appSpan);
+
+// 自检:divSpan 对嵌套结构要能找对闭合位置(否则上面几条都是假通过)
+const NEST = '<div class="a"><div><span>y</span><div></div></div></div><p>x</p>';
+const nestSpan = divSpan(NEST, 0);
+ok('divSpan 自检:嵌套结构闭合位置正确',
+   !!nestSpan && NEST.slice(nestSpan.end) === '<p>x</p>',
+   nestSpan && NEST.slice(nestSpan.end));
+
+// 找出所有 .modal-layer 的位置
+const modalRe = /<div class="modal-layer" id="(\w+)"/g;
+const modals = [];
+let mm;
+while ((mm = modalRe.exec(HTML))) modals.push({ id: mm[1], idx: mm.index });
+
+ok('至少有两个弹窗(取色器 + 背景)', modals.length >= 2, modals.map(m => m.id));
+modals.forEach(m => {
+  ok(`#${m.id} 在 .app 之外`, m.idx > appSpan.end,
+     { modal: m.idx, appEnd: appSpan.end });
+});
+
+// 必须排在设置抽屉之后(DOM 靠后 → 同 z-index 时也优先)
+const settingsIdx = HTML.indexOf('<div class="settings-layer"');
+ok('设置层存在', settingsIdx >= 0, settingsIdx);
+modals.forEach(m => {
+  ok(`#${m.id} 排在设置抽屉之后`, m.idx > settingsIdx, { modal: m.idx, settings: settingsIdx });
+});
+
+// z-index 必须高于设置抽屉
+const zOf = sel => {
+  const i = HTML.indexOf(sel);
+  if (i < 0) return null;
+  const block = HTML.slice(i, i + 700);
+  const m = block.match(/z-index:\s*(\d+)/);
+  return m ? Number(m[1]) : null;
+};
+const zModal = zOf('.modal-layer {');
+const zSettings = zOf('.settings-layer {');
+ok('弹窗 z-index 高于设置层', zModal !== null && zSettings !== null && zModal > zSettings,
+   { modal: zModal, settings: zSettings });
+
+// .app 确实形成层叠上下文(这正是当初出事的原因,别被顺手改掉)
+const appBlock = HTML.slice(appStart - 300, appStart + 900);
+const appRule = HTML.slice(HTML.lastIndexOf('.app {', appStart), HTML.indexOf('}', HTML.lastIndexOf('.app {', appStart)));
+ok('.app 有 position:relative', /position:\s*relative/.test(appRule), appRule.slice(0, 80));
+ok('.app 有非 auto 的 z-index(说明它自成层叠上下文)', /z-index:\s*\d/.test(appRule));
+
 console.log('\n========== ' + (pass + fail) + ' 项:' + pass + ' PASS / ' + fail + ' FAIL ==========');
 process.exit(fail ? 1 : 0);

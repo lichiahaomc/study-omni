@@ -3745,75 +3745,6 @@
             role="separator" aria-orientation="vertical" tabindex="0"
             aria-label="拖拽调整「AI 答疑」栏宽度" title="拖拽调整宽度 · 双击恢复默认"></button>
 
-<!-- ===== 弹窗:自定义主题色 =====
-     单独一层,z-index 高于设置抽屉,所以能在抽屉之上弹出 -->
-<div class="modal-layer" id="colorLayer" aria-hidden="true">
-  <div class="modal-scrim" data-modal-close></div>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="colorTitle" tabindex="-1" id="colorModal">
-    <div class="modal-head">
-      <span class="modal-title" id="colorTitle">自定义主题色</span>
-      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="picker-row">
-        <button type="button" class="picker-preview" id="pickerPreview"
-                aria-label="打开系统取色器"></button>
-        <div class="picker-fields">
-          <input type="text" class="picker-hex" id="pickerHex" spellcheck="false"
-                 autocomplete="off" maxlength="7" aria-label="十六进制颜色值" />
-          <span class="picker-note" id="pickerNote">改完可以直接看页面上的效果</span>
-        </div>
-      </div>
-      <div>
-        <span class="picker-note">快捷色</span>
-        <div class="picker-presets" id="pickerPresets" style="margin-top:7px"></div>
-      </div>
-      <input type="color" id="pickerNative" aria-label="系统取色器" hidden />
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
-      <button type="button" class="btn-mini" id="pickerApply">应用</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 弹窗:上传背景 ===== -->
-<div class="modal-layer" id="bgLayer" aria-hidden="true">
-  <div class="modal-scrim" data-modal-close></div>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bgTitle" tabindex="-1" id="bgModal">
-    <div class="modal-head">
-      <span class="modal-title" id="bgTitle">上传背景</span>
-      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="bg-drop" id="bgDrop" role="button" tabindex="0">
-        <span class="bg-drop-title">点击选择一张图片</span>
-        <span class="bg-drop-hint">也可以拖拽进来,或直接 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴</span>
-      </div>
-      <div class="bg-extract" id="bgExtract" hidden>
-        <span class="bg-extract-dot" id="bgExtractDot"></span>
-        <span class="bg-extract-text">识别到的主色 <b id="bgExtractHex">—</b>,应用后会设为主题色</span>
-      </div>
-      <div class="bg-current">
-        <span id="bgStatus">当前:默认渐变</span>
-        <button type="button" class="btn-mini btn-mini-ghost" id="bgRemove" hidden>移除背景</button>
-      </div>
-      <input type="file" id="bgFile" accept="image/*" hidden />
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
-      <button type="button" class="btn-mini" id="bgApply" disabled>应用</button>
-    </div>
-  </div>
-</div>
 
     <!-- Left: Upload -->
     <section class="panel is-active" data-pane="upload" aria-label="素材上传">
@@ -4218,6 +4149,79 @@
     </div>
   </aside>
 </div>
+
+<!-- ===== 弹窗:自定义主题色 / 上传背景 =====
+     必须放在 .app **外面**:.app 有 position:relative + z-index:1,自成层叠上下文,
+     放在里面的话弹窗的 z-index 只在 .app 内部有效,会被 body 层级的
+     设置抽屉(z-index:100)整个盖住 —— 表现就是「设置始终在最上层」。 -->
+<div class="modal-layer" id="colorLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="colorTitle" tabindex="-1" id="colorModal">
+    <div class="modal-head">
+      <span class="modal-title" id="colorTitle">自定义主题色</span>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="picker-row">
+        <button type="button" class="picker-preview" id="pickerPreview"
+                aria-label="打开系统取色器"></button>
+        <div class="picker-fields">
+          <input type="text" class="picker-hex" id="pickerHex" spellcheck="false"
+                 autocomplete="off" maxlength="7" aria-label="十六进制颜色值" />
+          <span class="picker-note" id="pickerNote">改完可以直接看页面上的效果</span>
+        </div>
+      </div>
+      <div>
+        <span class="picker-note">快捷色</span>
+        <div class="picker-presets" id="pickerPresets" style="margin-top:7px"></div>
+      </div>
+      <input type="color" id="pickerNative" aria-label="系统取色器" hidden />
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
+      <button type="button" class="btn-mini" id="pickerApply">应用</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 弹窗:上传背景 ===== -->
+<div class="modal-layer" id="bgLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bgTitle" tabindex="-1" id="bgModal">
+    <div class="modal-head">
+      <span class="modal-title" id="bgTitle">上传背景</span>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="bg-drop" id="bgDrop" role="button" tabindex="0">
+        <span class="bg-drop-title">点击选择一张图片</span>
+        <span class="bg-drop-hint">也可以拖拽进来,或直接 <kbd>Ctrl</kbd>+<kbd>V</kbd> 粘贴</span>
+      </div>
+      <div class="bg-extract" id="bgExtract" hidden>
+        <span class="bg-extract-dot" id="bgExtractDot"></span>
+        <span class="bg-extract-text">识别到的主色 <b id="bgExtractHex">—</b>,应用后会设为主题色</span>
+      </div>
+      <div class="bg-current">
+        <span id="bgStatus">当前:默认渐变</span>
+        <button type="button" class="btn-mini btn-mini-ghost" id="bgRemove" hidden>移除背景</button>
+      </div>
+      <input type="file" id="bgFile" accept="image/*" hidden />
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
+      <button type="button" class="btn-mini" id="bgApply" disabled>应用</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- 轻量提示条:栏宽恢复、设置导出等操作的即时反馈 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
