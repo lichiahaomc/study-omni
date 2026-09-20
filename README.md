@@ -14,7 +14,7 @@ functions/           Cloudflare Functions(必须在项目根,不能放进 public
   api/chat.js        POST /api/chat  流式对话
   api/parse.js       POST /api/parse 图片 / 多页 / 文本解析
   _lib/              共享模块(下划线开头,不映射成路由)
-    providers.js     厂商适配表(国产 5 家)+ token 预算分配 + 防 SSRF 端点表
+    providers.js     模型接入(DeepSeek 单家)+ 档位表 + token 预算 + 防 SSRF 端点
     prompts.js       学科提示词生成器(61 门学科,三层组合)
     ratelimit.js     限流 + 同源校验
 tests/
@@ -118,10 +118,9 @@ npm run dev                        # 等价于 wrangler pages dev public
 
 | 变量 | 值 | 是否加密 |
 |---|---|---|
-| `LLM_PROVIDER` | `deepseek` | 否 |
 | `DEEPSEEK_API_KEY` | `sk-...` | **是** |
 
-其余厂商的密钥可选,配了哪家就能切哪家(见下一节)。
+只需要这一个密钥。模型名有默认值,想改见「模型档位与模型名」一节。
 
 命令行部署:
 
@@ -155,57 +154,70 @@ npm run deploy
 > 请求进不到 Worker,不产生任何 token 费用)。是否可用取决于套餐,
 > 以控制台实际显示为准。
 
-## 切换模型厂商
+## 模型档位与模型名
 
-改 `.dev.vars`(本地)或控制台里的 `LLM_PROVIDER` 即可,无需改代码。
-所有厂商都走 OpenAI 兼容协议,所以共用同一套请求与解析逻辑。
+**只接 DeepSeek 一家。** 理由很直接:它是境内直连、无需额外网络条件的一条路,
+也是唯一端到端实测过的(流式 / 视觉 / 扫描件)。
 
-**表里只收国内可直接访问的厂商。** 早先版本放过 `gemini` 与 `openai`,
-但两家在境内都连不上(OpenAI 不向中国大陆提供服务,Gemini 同样需要海外网络),
-留着就是"永远走不到的死配置",已经移除。
+早先版本放过 `gemini` 与 `openai`(境内连不上,是死配置),
+后来换成四家国产厂商 —— 但没有可用密钥做端到端验证,一次都没被调用过,
+同样属于"摆着好看"。演示要的是**真能跑通**的一条路,所以收敛成一家。
 
-| 厂商 | 密钥变量 | 说明 |
+界面上只暴露两个档位,各自对应一个真实存在的模型:
+
+| 档位 | 模型 | 说明 |
 |---|---|---|
-| `deepseek` | `DEEPSEEK_API_KEY` | **默认,也是唯一端到端实测过的**(流式 / 视觉 / 扫描件) |
-| `qwen` | `DASHSCOPE_API_KEY` | 通义千问 · 阿里百炼,有免费额度;Qwen-VL 识图强 |
-| `zhipu` | `ZHIPU_API_KEY` | 智谱 GLM,Flash 档有免费额度 |
-| `moonshot` | `MOONSHOT_API_KEY` | 月之暗面 Kimi,长上下文见长 |
-| `doubao` | `ARK_API_KEY` | 豆包 · 火山方舟;注意方舟可能要求填接入点 ID(`ep-xxxx`) |
+| **快速**(默认) | `deepseek-flash` | 响应最快、成本最低,适合日常问答与连续追问 |
+| **深度** | `deepseek-v4-pro` | 推理更强,适合数学推导与多步讲解;**实测明显更慢** |
 
-后面四家的**代码路径与 DeepSeek 完全相同**(同一套请求构造、SSE 解析、
-思维链预算),但没有可用的密钥做端到端验证 —— 用之前请先确认下表里的
-默认模型名在你账号下可用。
+默认选「快速」不是随手定的:实测 `deepseek-v4-pro` 回答一个"3²+4²"
+要 **16.7 秒**、思维链烧掉 1024 tokens;`deepseek-flash` 同样会输出思维链
+(实测 40~60 tokens),但 1 秒内就有正文。交互式答疑里前者当默认太慢。
 
-### 模型名可以覆盖,不用改代码
+**图片与扫描件解析固定走 `deepseek-flash`,与用户选的档位无关** ——
+实测把图片喂给 `deepseek-v4-pro` 会一路空转到 `finish_reason=length`、
+正文一个字都不出。所以识图由输入类型决定,不让用户选。
 
-模型名各家改得快、命名规则也不统一。所以每家都留了两个环境变量:
+### 官方只支持两个模型名
 
-```bash
-DEEPSEEK_MODEL=...          # 对话模型
-DEEPSEEK_VISION_MODEL=...   # 图片 / 扫描件解析用的视觉模型
+实测 `GET https://api.deepseek.com/models` 只返回:
+
+```
+deepseek-flash
+deepseek-v4-pro
 ```
 
-其余四家同理(`QWEN_MODEL` / `ZHIPU_VISION_MODEL` / `ARK_MODEL` …)。
+> ⚠️ 别用 `deepseek-v4-flash`。它能跑通(服务端接受),但**不在官方支持列表里**
+> —— 报错信息原文是 "The supported API model names are deepseek-flash,
+> deepseek-v4-pro"。属于未公开别名,随时可能消失。
+> 同理 `deepseek-chat` / `deepseek-reasoner` 已于 2026-07-24 退役。
+
+### 改名时改配置,不用改代码
+
+```bash
+DEEPSEEK_MODEL_FAST=deepseek-flash     # 「快速」档
+DEEPSEEK_MODEL_DEEP=deepseek-v4-pro    # 「深度」档
+DEEPSEEK_VISION_MODEL=deepseek-flash   # 图片 / 扫描件解析
+```
+
 不填就用 `functions/_lib/providers.js` 里的默认值。
 
-`GET /api/chat` 会返回一份自检,把每家的**当前生效模型名、密钥是否已配、
-是否端到端实测过**都列出来(只报状态,绝不回传密钥本身),排查时先看它:
+`GET /api/chat` 会返回一份自检,列出**每个档位当前生效的模型名、被哪个环境变量
+覆盖、密钥是否已配**(只报状态,绝不回传密钥本身),排查时先看它:
 
 ```bash
-curl -s https://<你的域名>/api/chat | jq .providers
+curl -s https://<你的域名>/api/chat
 ```
 
-### 再加一家只需要一条表项
+### 想再接一家?
 
-任何 OpenAI 兼容厂商都能接。在 `functions/_lib/providers.js` 的 `PROVIDERS`
-里补一条即可(endpoint / 密钥变量 / 模型名三项)。
+照 `functions/_lib/providers.js` 顶部的说明改三处即可(endpoint 常量、
+密钥环境变量、档位表里的模型 id),业务层不用动。
 
-**端点必须写死在这张表里,不能由前端指定** —— 否则就是一个 SSRF 入口。
-`tests/providers.test.mjs` 会直接读源码来守这条线:API 层不允许从
-`env` 或请求体里取端点,也不允许绕过 `callUpstream` 自己直连外部地址。
-
-> 注意:DeepSeek 的 `deepseek-chat` / `deepseek-reasoner` 端点已于 2026-07-24 退役,
-> 当前模型名为 `deepseek-v4-flash` / `deepseek-v4-pro`。
+**端点必须写死在该文件里,不能由前端指定** —— 否则就是一个 SSRF 入口。
+`tests/providers.test.mjs` 会直接读源码来守这条线:API 层不允许从 `env`
+或请求体里取端点,不允许绕过 `callUpstream` 自己直连外部地址,
+也不允许直接采纳客户端送来的模型名(前端只送 `tier` 这种抽象档位)。
 
 ## token 预算与「回答空白」的排查
 
@@ -243,10 +255,18 @@ curl https://你的域名/api/chat
 ```jsonc
 {
   "ok": true,
-  "provider": "deepseek",
-  "label": "DeepSeek",
-  "model": "deepseek-v4-flash",
+  "provider": "DeepSeek",
+  "keyEnv": "DEEPSEEK_API_KEY",
   "keyConfigured": true,
+  "defaultTier": "fast",
+  "tiers": [                     // 每个档位当前生效的模型名
+    { "name": "fast", "label": "快速", "model": "deepseek-flash",
+      "desc": "响应最快、成本最低,适合日常问答与连续追问", "overriddenBy": null },
+    { "name": "deep", "label": "深度", "model": "deepseek-v4-pro",
+      "desc": "推理更强,适合数学推导与多步讲解;实测明显更慢", "overriddenBy": null }
+  ],
+  "visionModel": "deepseek-flash",   // 图片 / 扫描件解析固定用它
+  "visionOverriddenBy": null,
   "limits": {                    // 当前生效的限流参数与用量
     "perMinutePerIP": 20,
     "perDayGlobal": 2000,

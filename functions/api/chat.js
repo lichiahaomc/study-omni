@@ -1,13 +1,13 @@
 /**
  * POST /api/chat —— 流式对话代理
  *
- * 前端只需要关心 messages / subject / style;
- * 密钥、厂商端点、模型名、system prompt 全部由服务端决定,不信任任何客户端输入。
+ * 前端只需要关心 messages / subject / style / tier;
+ * 密钥、上游端点、模型名、system prompt 全部由服务端决定,不信任任何客户端输入。
  */
 
 import {
-  pickProvider, listProviders, resolveModel, json, clamp, resolveMaxTokens,
-  callUpstream, streamToClient, DEFAULT_PROVIDER, PROVIDERS,
+  json, clamp, resolveTier, resolveModel, resolveMaxTokens,
+  callUpstream, streamToClient, describeConfig, PROVIDER,
 } from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin, currentLimits } from '../_lib/ratelimit.js';
@@ -32,19 +32,10 @@ export async function onRequestPost(context) {
     return json({ error: '请求体不是合法 JSON' }, 400);
   }
 
-  const { name, provider } = pickProvider(env, payload.provider);
-  if (!provider) {
-    return json({
-      error: `未知厂商 "${name}"`,
-      hint: '可选 ' + Object.keys(PROVIDERS).join(' / '),
-    }, 400);
-  }
-
-  const apiKey = env[provider.keyEnv];
+  const apiKey = env[PROVIDER.keyEnv];
   if (!apiKey) {
     return json({
-      error: `服务端未配置 ${provider.keyEnv}`,
-      provider: name,
+      error: `服务端未配置 ${PROVIDER.keyEnv}`,
       hint: '本地开发请写入 .dev.vars 并重跑 wrangler pages dev;线上请在 Cloudflare 控制台配置 Secret',
     }, 500);
   }
@@ -76,54 +67,46 @@ export async function onRequestPost(context) {
     messages = [{ role: 'system', content: sys }, ...messages];
   }
 
+  const tier = resolveTier(payload.tier);
+  const model = resolveModel(env, 'chat', tier);
+
   const body = {
-    // 模型名一律由服务端决定。这里刻意**不再读** payload.model ——
-    // 文件开头的注释写着"模型名全部由服务端决定",但代码原先留了
-    // `payload.model ||`,与注释自相矛盾:客户端只要能猜到厂商的模型名,
-    // 就能绕过我们选定的默认型号。要放开也只应放开「档位」这种抽象概念,
-    // 由服务端映射成真实模型名,而不是让前端直接指名。
-    model: resolveModel(env, provider, 'chat'),
+    // 模型名一律由服务端解析。前端只送一个抽象「档位」(fast / deep),
+    // 由这里映射成真实模型 id —— 不让客户端直接指名模型。
+    model,
     messages,
     stream: true,
     temperature: clamp(payload.temperature, 0, 2, 0.3),
     // 前端给的是「正文额度」;对带思维链的模型还要额外留一截思考预算,
     // 否则思考会把 max_tokens 吃光、正文一个字都出不来。
-    max_tokens: resolveMaxTokens(payload.maxTokens, provider),
+    max_tokens: resolveMaxTokens(payload.maxTokens, { kind: 'chat', tier }),
   };
 
   let upstream;
   try {
-    upstream = await callUpstream({ provider, apiKey, payload: body });
+    upstream = await callUpstream({ apiKey, payload: body });
   } catch (e) {
-    return json({ error: '无法连接上游厂商', provider: name, detail: String(e) }, 502);
+    return json({ error: '无法连接上游', detail: String(e) }, 502);
   }
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => '');
     return json({
-      error: '上游厂商返回错误',
-      provider: name,
+      error: '上游返回错误',
       status: upstream.status,
       detail: detail.slice(0, 800),
     }, 502);
   }
 
-  return streamToClient(upstream, name);
+  return streamToClient(upstream, model);
 }
 
-/* 调试用:确认路由、厂商配置与限流参数是否就位 */
+/* 调试用:确认路由、模型配置与限流参数是否就位 */
 export async function onRequestGet({ env }) {
-  const { name, provider } = pickProvider(env, null);
+  const cfg = describeConfig(env);
   return json({
     ok: true,
-    provider: name,
-    label: provider?.label,
-    model: resolveModel(env, provider, 'chat'),
-    visionModel: resolveModel(env, provider, 'vision'),
-    keyConfigured: !!env[provider?.keyEnv],
-    // 可切换的厂商一览(只报"密钥有没有配",密钥本身绝不回传)
-    providers: listProviders(env),
-    defaultProvider: DEFAULT_PROVIDER,
+    ...cfg,
     limits: currentLimits(env),
     usage: '用 POST 发起对话',
   });

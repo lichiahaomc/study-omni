@@ -3,50 +3,24 @@
 # .dev.vars 已在 .gitignore 中,不会被提交到仓库
 # ============================================
 
-# 默认走哪一家:deepseek / qwen / zhipu / moonshot / doubao
-# 推荐 deepseek —— 输出 ¥4.5~9 每百万 tokens,比海外旗舰档便宜一个量级,
-# 而且国内直连不需要任何额外网络条件。
-LLM_PROVIDER=deepseek
-
-# ------- 至少配一家,配哪家用哪家 -------
-# 只配了 deepseek 就只跑 deepseek;想切别家就得配别家的密钥。
-# 未配密钥的厂商请求会返回 500 并明确告知缺哪个变量。
-
-# DeepSeek —— 首选,已端到端实测(流式 / 视觉 / 扫描件)
+# 本项目只接 DeepSeek 一家 —— 境内直连、无需额外网络条件,
+# 也是唯一端到端实测过的一条路(流式 / 视觉 / 扫描件)。
 # 控制台 https://platform.deepseek.com/api_keys
 DEEPSEEK_API_KEY=
 
-# 通义千问 · 阿里百炼 —— 有免费额度,Qwen-VL 识图强
-# 控制台 https://bailian.console.aliyun.com/
-# DASHSCOPE_API_KEY=
-
-# 智谱 GLM —— Flash 档有免费额度
-# 控制台 https://open.bigmodel.cn/
-# ZHIPU_API_KEY=
-
-# 月之暗面 Kimi —— 长上下文见长
-# 控制台 https://platform.moonshot.cn/
-# MOONSHOT_API_KEY=
-
-# 豆包 · 火山方舟 —— 注意方舟可能要求填「推理接入点 ID」(ep-xxxx)
-# 控制台 https://console.volcengine.com/ark
-# ARK_API_KEY=
-
 # ============================================
-# 模型名覆盖 —— 模型名各家改得快,以控制台为准
-# 不填就用代码里的默认值(见 functions/_lib/providers.js)
+# 模型名覆盖 —— 官方改名时改这里,不用改代码
+# 不填就用 functions/_lib/providers.js 里的默认值
 # ============================================
-
-# DEEPSEEK_MODEL=deepseek-v4-flash
-# DEEPSEEK_VISION_MODEL=deepseek-v4-flash
-# QWEN_MODEL=qwen3.7-plus
-# QWEN_VISION_MODEL=qwen-vl-max
-# ZHIPU_MODEL=glm-5
-# ZHIPU_VISION_MODEL=glm-5v
-# MOONSHOT_MODEL=kimi-latest
-# MOONSHOT_VISION_MODEL=kimi-latest
-# ARK_MODEL=doubao-2.0-pro-256k
-# ARK_VISION_MODEL=doubao-2.0-vision
+#
+# 官方支持的模型名**只有两个**(实测 GET /models):
+#   deepseek-flash      快;而且是唯一支持识图的
+#   deepseek-v4-pro     推理更强;不支持图片
+# 别用 deepseek-v4-flash —— 它能跑通但不在支持列表里,属未公开别名。
+#
+# DEEPSEEK_MODEL_FAST=deepseek-flash      # 「快速」档
+# DEEPSEEK_MODEL_DEEP=deepseek-v4-pro     # 「深度」档
+# DEEPSEEK_VISION_MODEL=deepseek-flash    # 图片 / 扫描件解析专用
 
 # ============================================
 # 以下都是可选项,不填就用代码里的默认值
@@ -57,7 +31,7 @@ DEEPSEEK_API_KEY=
 # RATE_LIMIT_PER_MIN=20
 
 # 全站每天最多几次(默认 2000)。这是防刷爆账单的兜底闸门。
-# 按 deepseek-v4-flash 输出 ¥9/百万 tokens 粗估,2000 次约 ¥10 量级。
+# 按 flash 的输出价粗估,2000 次约 ¥10 量级。
 # RATE_LIMIT_PER_DAY=2000
 
 # 需要额外放行哪些来源(逗号分隔)。默认只允许同源,

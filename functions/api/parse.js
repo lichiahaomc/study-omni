@@ -10,7 +10,7 @@
  */
 
 import {
-  pickProvider, resolveModel, json, clamp, resolveMaxTokens, callUpstream, readText, PROVIDERS,
+  json, clamp, resolveModel, resolveMaxTokens, callUpstream, readText, PROVIDER,
 } from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin } from '../_lib/ratelimit.js';
@@ -64,19 +64,13 @@ export async function onRequestPost({ request, env }) {
     return json({ error: '请求体不是合法 JSON' }, 400);
   }
 
-  const { name, provider } = pickProvider(env, payload.provider);
-  if (!provider) {
-    return json({
-      error: `未知厂商 "${name}"`,
-      hint: '可选 ' + Object.keys(PROVIDERS).join(' / '),
-    }, 400);
-  }
+  const apiKey = env[PROVIDER.keyEnv];
+  if (!apiKey) return json({ error: `服务端未配置 ${PROVIDER.keyEnv}` }, 500);
 
-  const apiKey = env[provider.keyEnv];
-  if (!apiKey) return json({ error: `服务端未配置 ${provider.keyEnv}`, provider: name }, 500);
-
-  // 视觉统一走各家的 vision 型号(可用 <厂商>_VISION_MODEL 覆盖)
-  const visionModel = resolveModel(env, provider, 'vision');
+  /* 识图固定走支持视觉的那个模型,与用户选的档位无关 ——
+     实测把图片喂给 deepseek-v4-pro 会空转到 finish_reason=length,
+     正文一个字都不出。这里由输入类型决定,不让用户选。 */
+  const visionModel = resolveModel(env, 'vision');
 
   const type = ['text', 'images'].includes(payload.type) ? payload.type : 'image';
   let userContent;
@@ -135,7 +129,6 @@ export async function onRequestPost({ request, env }) {
   let upstream;
   try {
     upstream = await callUpstream({
-      provider,
       apiKey,
       payload: {
         model: visionModel,
@@ -143,18 +136,17 @@ export async function onRequestPost({ request, env }) {
         stream: false,
         temperature: clamp(payload.temperature, 0, 2, 0.2),
         // 和 chat 一样要给思维链留额度:否则思考吃光预算 → 解析结果为空
-        max_tokens: resolveMaxTokens(payload.maxTokens, provider),
+        max_tokens: resolveMaxTokens(payload.maxTokens, { kind: 'vision' }),
       },
     });
   } catch (e) {
-    return json({ error: '无法连接上游厂商', provider: name, detail: String(e) }, 502);
+    return json({ error: '无法连接上游', detail: String(e) }, 502);
   }
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => '');
     return json({
-      error: '上游厂商返回错误',
-      provider: name,
+      error: '上游返回错误',
       status: upstream.status,
       detail: detail.slice(0, 800),
     }, 502);
@@ -162,12 +154,12 @@ export async function onRequestPost({ request, env }) {
 
   const { text, raw } = await readText(upstream);
   if (!text) {
-    return json({ error: '上游未返回文本内容', provider: name, raw }, 502);
+    return json({ error: '上游未返回文本内容', raw }, 502);
   }
 
   return json({
     ok: true,
-    provider: name,
+    provider: PROVIDER.label,
     model: visionModel,
     content: text,
     usage: raw?.usage || null,

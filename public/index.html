@@ -3674,14 +3674,16 @@
 
         <div class="settings-row settings-row-block">
           <div class="settings-label">
-            <span class="settings-label-main">模型</span>
-            <span class="settings-label-desc" id="modelDesc">推理能力强,适合数学推导与多步讲解</span>
+            <span class="settings-label-main">模型档位</span>
+            <span class="settings-label-desc" id="modelDesc">响应最快、成本最低,适合日常问答与连续追问</span>
           </div>
-          <div class="seg seg-stack" id="segModel" role="radiogroup" aria-label="模型">
-            <button type="button" class="seg-item" data-value="omni-pro" role="radio" aria-checked="true">Omni Pro</button>
-            <button type="button" class="seg-item" data-value="omni-flash" role="radio" aria-checked="false">Omni Flash</button>
-            <button type="button" class="seg-item" data-value="omni-vision" role="radio" aria-checked="false">Omni Vision</button>
+          <div class="seg seg-stack" id="segModel" role="radiogroup" aria-label="模型档位">
+            <button type="button" class="seg-item" data-value="fast" role="radio" aria-checked="true">快速</button>
+            <button type="button" class="seg-item" data-value="deep" role="radio" aria-checked="false">深度</button>
           </div>
+          <p class="settings-label-desc" style="display:block;margin-top:6px">
+            图片与扫描件解析会自动使用支持识图的模型,不受这里影响。
+          </p>
         </div>
 
         <div class="settings-row settings-row-block">
@@ -3825,10 +3827,16 @@ chatInput.addEventListener('keydown', (e) => {
   }
 });
 
-sendBtn.addEventListener('click', sendMessage);
+/* 注意必须包一层箭头函数:sendMessage 的第一个参数是「预设问题文本」,
+   直接把函数名当监听器传,点击时 preset 会变成 MouseEvent 对象,
+   `preset.trim()` 抛 TypeError —— 表现就是「点发送按钮毫无反应」,
+   只有按回车能用。 */
+sendBtn.addEventListener('click', () => sendMessage());
 
 function sendMessage(preset) {
-  const content = (preset ?? chatInput.value).trim();
+  // preset 只在「点建议芯片」时是字符串;正常情况下取输入框的值。
+  // 再加一道类型判断,避免以后又有人把事件对象当文本传进来。
+  const content = (typeof preset === 'string' ? preset : chatInput.value).trim();
   if (!content) return;
   if (AI.pending) return;                 // 正在作答时不接受新的提问
   appendMessage('user', content);
@@ -4329,6 +4337,9 @@ async function realChat(question) {
     subject: getSubject(),       // 服务端据此生成学科 prompt
     material: AI.material,       // 已解析的素材,由服务端拼进 system
     style: st.style || 'balanced',
+    // 送「档位」而不是模型名 —— 真实模型 id 由服务端映射,
+    // 前端不需要(也不该)知道具体是哪几个 model
+    tier: st.tier || 'fast',
     temperature: st.temperature ?? 0.3,
     maxTokens: st.maxLen || 2048,
   };
@@ -5461,7 +5472,8 @@ const Settings = (function () {
     fontSize: 14,
     density: 'comfortable',
     motion: 'on',
-    model: 'omni-pro',
+    // 档位名(不是模型名)。真实模型 id 由服务端映射 —— 见 providers.js 的 TIERS
+    tier: 'fast',
     style: 'balanced',
     temperature: 0.3,
     maxLen: 2048,
@@ -5472,11 +5484,11 @@ const Settings = (function () {
     col3: 400
   };
 
-  const MODEL_DESC = {
-    'omni-pro': '推理能力强,适合数学推导与多步讲解',
-    'omni-flash': '响应最快、成本最低,适合日常问答',
-    'omni-vision': '图文理解最强,优先用于题目图片解析'
+  const TIER_DESC = {
+    fast: '响应最快、成本最低,适合日常问答与连续追问',
+    deep: '推理更强,适合数学推导与多步讲解;实测明显更慢'
   };
+  const TIERS = Object.keys(TIER_DESC);
 
   const BRANDS = ['green', 'indigo', 'blue', 'violet', 'rose', 'cyan'];
   let state = Object.assign({}, DEFAULTS);
@@ -5527,6 +5539,9 @@ const Settings = (function () {
     else root.removeAttribute('data-motion');
     if (BRANDS.indexOf(state.brand) < 0) state.brand = 'green';
     root.setAttribute('data-brand', state.brand);
+    // 旧版本存的是 'omni-pro' 这类已废弃的档位名,或者导入的文件里写了别的值 ——
+    // 兜回默认档,否则界面会没有任何一项选中
+    if (TIERS.indexOf(state.tier) < 0) state.tier = DEFAULTS.tier;
 
     root.style.setProperty('--col-1', state.col1 + 'px');
     root.style.setProperty('--col-3', state.col3 + 'px');
@@ -5537,7 +5552,7 @@ const Settings = (function () {
     setRange('maxLen', state.maxLen, 'maxLenOut');
     setSeg('segDensity', state.density);
     setSeg('segMotion', state.motion);
-    setSeg('segModel', state.model);
+    setSeg('segModel', state.tier);
     setSeg('segStyle', state.style);
     setSeg('segMaxSize', String(state.maxSize));
     setSwatch('swatchBrand', state.brand);
@@ -5546,7 +5561,7 @@ const Settings = (function () {
     root.setAttribute('data-latex', state.latex ? 'on' : 'off');
 
     const md = document.getElementById('modelDesc');
-    if (md) md.textContent = MODEL_DESC[state.model] || '';
+    if (md) md.textContent = TIER_DESC[state.tier] || '';
     const c1 = document.getElementById('col1Out');
     const c3 = document.getElementById('col3Out');
     if (c1) c1.textContent = state.col1;
@@ -5699,7 +5714,7 @@ const Settings = (function () {
     fontSize:     v => typeof v === 'number' && v >= 12 && v <= 18,
     density:      v => v === 'comfortable' || v === 'compact',
     motion:       v => v === 'on' || v === 'off',
-    model:        v => Object.prototype.hasOwnProperty.call(MODEL_DESC, v),
+    tier:         v => TIERS.indexOf(v) >= 0,
     style:        v => v === 'concise' || v === 'balanced' || v === 'step',
     temperature:  v => typeof v === 'number' && v >= 0 && v <= 1,
     maxLen:       v => typeof v === 'number' && v >= 256 && v <= 8192,
@@ -5754,7 +5769,7 @@ const Settings = (function () {
     bindSeg('segTheme', 'theme');
     bindSeg('segDensity', 'density');
     bindSeg('segMotion', 'motion');
-    bindSeg('segModel', 'model');
+    bindSeg('segModel', 'tier');
     bindSeg('segStyle', 'style');
     bindSeg('segMaxSize', 'maxSize');
     bindRange('fontSize', 'fontSize', 'fontSizeOut');
@@ -6136,18 +6151,18 @@ function toast(msg) {
   });
 })();
 
-/* ---- 设置联动到具体功能(示例:文件大小上限、自动解析) ---- */
+/* ---- 设置联动到具体功能 ---- */
 document.addEventListener('settingschange', e => {
-  const { key, value } = e.detail || {};
+  const { key } = e.detail || {};
   // 'import' 是导入设置时发的一次性事件,可能同时改了很多项
   if (key === 'maxSize' || key === 'import') {
     const hint = document.querySelector('.upload-zone .hint');
     if (hint) hint.textContent = '支持 PNG · JPG · PDF · 最大 ' + Settings.getState().maxSize + 'MB';
   }
-  if (key === 'model' || key === 'style' || key === 'import') {
-    // 真实项目里这里会把参数一并带进请求体;当前仅作提示
-    console.log('[StudyOmni] 请求参数已更新:', Settings.getState());
-  }
+  // 注:style / tier 不用在这里另做处理 —— sendMessage 组装请求体时直接读
+  // Settings.getState(),改完下一次提问就生效。
+  // 这里原先有一句 console.log 假装"请求参数已更新",但请求体里根本没带这些值。
+  // 已删(同类隐患:别用日志把未生效的功能包装成已生效)。
 });
 
 </script>
