@@ -14,10 +14,11 @@ functions/           Cloudflare Functions(必须在项目根,不能放进 public
   api/chat.js        POST /api/chat  流式对话
   api/parse.js       POST /api/parse 图片 / 多页 / 文本解析
   _lib/              共享模块(下划线开头,不映射成路由)
-    providers.js     三家厂商适配表 + token 预算分配
+    providers.js     厂商适配表(国产 5 家)+ token 预算分配 + 防 SSRF 端点表
     prompts.js       学科提示词生成器(61 门学科,三层组合)
     ratelimit.js     限流 + 同源校验
 tests/
+  providers.test.mjs 厂商表自洽性 + 模型名解析 + 防 SSRF 源码断言(离线)
   ratelimit.test.mjs 限流与同源校验(离线)
   subjects.test.mjs  学科表一致性 + 提示词生成(离线)
 ```
@@ -120,6 +121,8 @@ npm run dev                        # 等价于 wrangler pages dev public
 | `LLM_PROVIDER` | `deepseek` | 否 |
 | `DEEPSEEK_API_KEY` | `sk-...` | **是** |
 
+其余厂商的密钥可选,配了哪家就能切哪家(见下一节)。
+
 命令行部署:
 
 ```bash
@@ -155,14 +158,51 @@ npm run deploy
 ## 切换模型厂商
 
 改 `.dev.vars`(本地)或控制台里的 `LLM_PROVIDER` 即可,无需改代码。
+所有厂商都走 OpenAI 兼容协议,所以共用同一套请求与解析逻辑。
 
-三家都走 OpenAI 兼容协议,所以共用同一套请求与解析逻辑:
+**表里只收国内可直接访问的厂商。** 早先版本放过 `gemini` 与 `openai`,
+但两家在境内都连不上(OpenAI 不向中国大陆提供服务,Gemini 同样需要海外网络),
+留着就是"永远走不到的死配置",已经移除。
 
 | 厂商 | 密钥变量 | 说明 |
 |---|---|---|
-| `deepseek` | `DEEPSEEK_API_KEY` | 默认。输出 ¥4.5~9/百万 tokens(闲时/高峰),图片一张封顶 384 tokens |
-| `gemini` | `GEMINI_API_KEY` | 视觉成熟度高,识图不准时可切这家对比 |
-| `openai` | `OPENAI_API_KEY` | 最贵,通常作为兜底 |
+| `deepseek` | `DEEPSEEK_API_KEY` | **默认,也是唯一端到端实测过的**(流式 / 视觉 / 扫描件) |
+| `qwen` | `DASHSCOPE_API_KEY` | 通义千问 · 阿里百炼,有免费额度;Qwen-VL 识图强 |
+| `zhipu` | `ZHIPU_API_KEY` | 智谱 GLM,Flash 档有免费额度 |
+| `moonshot` | `MOONSHOT_API_KEY` | 月之暗面 Kimi,长上下文见长 |
+| `doubao` | `ARK_API_KEY` | 豆包 · 火山方舟;注意方舟可能要求填接入点 ID(`ep-xxxx`) |
+
+后面四家的**代码路径与 DeepSeek 完全相同**(同一套请求构造、SSE 解析、
+思维链预算),但没有可用的密钥做端到端验证 —— 用之前请先确认下表里的
+默认模型名在你账号下可用。
+
+### 模型名可以覆盖,不用改代码
+
+模型名各家改得快、命名规则也不统一。所以每家都留了两个环境变量:
+
+```bash
+DEEPSEEK_MODEL=...          # 对话模型
+DEEPSEEK_VISION_MODEL=...   # 图片 / 扫描件解析用的视觉模型
+```
+
+其余四家同理(`QWEN_MODEL` / `ZHIPU_VISION_MODEL` / `ARK_MODEL` …)。
+不填就用 `functions/_lib/providers.js` 里的默认值。
+
+`GET /api/chat` 会返回一份自检,把每家的**当前生效模型名、密钥是否已配、
+是否端到端实测过**都列出来(只报状态,绝不回传密钥本身),排查时先看它:
+
+```bash
+curl -s https://<你的域名>/api/chat | jq .providers
+```
+
+### 再加一家只需要一条表项
+
+任何 OpenAI 兼容厂商都能接。在 `functions/_lib/providers.js` 的 `PROVIDERS`
+里补一条即可(endpoint / 密钥变量 / 模型名三项)。
+
+**端点必须写死在这张表里,不能由前端指定** —— 否则就是一个 SSRF 入口。
+`tests/providers.test.mjs` 会直接读源码来守这条线:API 层不允许从
+`env` 或请求体里取端点,也不允许绕过 `callUpstream` 自己直连外部地址。
 
 > 注意:DeepSeek 的 `deepseek-chat` / `deepseek-reasoner` 端点已于 2026-07-24 退役,
 > 当前模型名为 `deepseek-v4-flash` / `deepseek-v4-pro`。

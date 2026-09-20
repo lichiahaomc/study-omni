@@ -5,7 +5,10 @@
  * 密钥、厂商端点、模型名、system prompt 全部由服务端决定,不信任任何客户端输入。
  */
 
-import { pickProvider, json, clamp, resolveMaxTokens, callUpstream, streamToClient } from '../_lib/providers.js';
+import {
+  pickProvider, listProviders, resolveModel, json, clamp, resolveMaxTokens,
+  callUpstream, streamToClient, DEFAULT_PROVIDER, PROVIDERS,
+} from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin, currentLimits } from '../_lib/ratelimit.js';
 
@@ -31,7 +34,10 @@ export async function onRequestPost(context) {
 
   const { name, provider } = pickProvider(env, payload.provider);
   if (!provider) {
-    return json({ error: `未知厂商 "${name}"`, hint: '可选 deepseek / gemini / openai' }, 400);
+    return json({
+      error: `未知厂商 "${name}"`,
+      hint: '可选 ' + Object.keys(PROVIDERS).join(' / '),
+    }, 400);
   }
 
   const apiKey = env[provider.keyEnv];
@@ -71,7 +77,12 @@ export async function onRequestPost(context) {
   }
 
   const body = {
-    model: payload.model || provider.defaultModel,
+    // 模型名一律由服务端决定。这里刻意**不再读** payload.model ——
+    // 文件开头的注释写着"模型名全部由服务端决定",但代码原先留了
+    // `payload.model ||`,与注释自相矛盾:客户端只要能猜到厂商的模型名,
+    // 就能绕过我们选定的默认型号。要放开也只应放开「档位」这种抽象概念,
+    // 由服务端映射成真实模型名,而不是让前端直接指名。
+    model: resolveModel(env, provider, 'chat'),
     messages,
     stream: true,
     temperature: clamp(payload.temperature, 0, 2, 0.3),
@@ -107,8 +118,12 @@ export async function onRequestGet({ env }) {
     ok: true,
     provider: name,
     label: provider?.label,
-    model: provider?.defaultModel,
+    model: resolveModel(env, provider, 'chat'),
+    visionModel: resolveModel(env, provider, 'vision'),
     keyConfigured: !!env[provider?.keyEnv],
+    // 可切换的厂商一览(只报"密钥有没有配",密钥本身绝不回传)
+    providers: listProviders(env),
+    defaultProvider: DEFAULT_PROVIDER,
     limits: currentLimits(env),
     usage: '用 POST 发起对话',
   });

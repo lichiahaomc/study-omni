@@ -9,7 +9,9 @@
  * 这里走非流式 —— 解析是一次性结果,不需要打字机效果。
  */
 
-import { pickProvider, json, clamp, resolveMaxTokens, callUpstream, readText } from '../_lib/providers.js';
+import {
+  pickProvider, resolveModel, json, clamp, resolveMaxTokens, callUpstream, readText, PROVIDERS,
+} from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin } from '../_lib/ratelimit.js';
 
@@ -63,10 +65,18 @@ export async function onRequestPost({ request, env }) {
   }
 
   const { name, provider } = pickProvider(env, payload.provider);
-  if (!provider) return json({ error: `未知厂商 "${name}"` }, 400);
+  if (!provider) {
+    return json({
+      error: `未知厂商 "${name}"`,
+      hint: '可选 ' + Object.keys(PROVIDERS).join(' / '),
+    }, 400);
+  }
 
   const apiKey = env[provider.keyEnv];
   if (!apiKey) return json({ error: `服务端未配置 ${provider.keyEnv}`, provider: name }, 500);
+
+  // 视觉统一走各家的 vision 型号(可用 <厂商>_VISION_MODEL 覆盖)
+  const visionModel = resolveModel(env, provider, 'vision');
 
   const type = ['text', 'images'].includes(payload.type) ? payload.type : 'image';
   let userContent;
@@ -128,8 +138,7 @@ export async function onRequestPost({ request, env }) {
       provider,
       apiKey,
       payload: {
-        // 视觉统一走各家的 vision 型号
-        model: provider.visionModel,
+        model: visionModel,
         messages,
         stream: false,
         temperature: clamp(payload.temperature, 0, 2, 0.2),
@@ -159,7 +168,7 @@ export async function onRequestPost({ request, env }) {
   return json({
     ok: true,
     provider: name,
-    model: provider.visionModel,
+    model: visionModel,
     content: text,
     usage: raw?.usage || null,
   });

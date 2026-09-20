@@ -10,7 +10,7 @@
     "pages:create": "wrangler pages project create studyomni --production-branch=main",
     "tail": "wrangler pages deployment tail",
     "whoami": "wrangler whoami",
-    "test": "node tests/ratelimit.test.mjs && node tests/subjects.test.mjs"
+    "test": "node tests/providers.test.mjs && node tests/ratelimit.test.mjs && node tests/subjects.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
