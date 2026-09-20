@@ -271,5 +271,78 @@ const appRule = HTML.slice(HTML.lastIndexOf('.app {', appStart), HTML.indexOf('}
 ok('.app 有 position:relative', /position:\s*relative/.test(appRule), appRule.slice(0, 80));
 ok('.app 有非 auto 的 z-index(说明它自成层叠上下文)', /z-index:\s*\d/.test(appRule));
 
+/* ---------- 液态玻璃的通透度 ----------
+   这几条不是审美判断,而是防回归:把"整体更通透"这个决定固定下来,
+   免得以后某次改动又悄悄把某层调回奶白。上限给得很宽松,
+   只要不是接近实色就通过。 */
+section('玻璃通透度(防改回奶白)');
+
+// 取某个选择器规则里 background 声明的最大 alpha。
+// 两个坑:① 同一选择器可能出现多次(动效降级等覆盖),要挑真正带 background 的那条;
+//         ② 有的表面写的是 var(--glass-tint),得去解令牌定义。
+function tokenBg(name) {
+  const i = HTML.indexOf('--' + name + ':');
+  return i < 0 ? '' : HTML.slice(i, HTML.indexOf(';', i));
+}
+function bgAlphaOf(sel) {
+  let from = 0;
+  for (;;) {
+    const i = HTML.indexOf(sel, from);
+    if (i < 0) return null;
+    const block = HTML.slice(i, HTML.indexOf('}', i));
+    const decl = (block.match(/background:\s*([^;]+);/) || [])[1];
+    if (decl) {
+      const v = decl.match(/var\(--([\w-]+)\)/);
+      const text = v ? tokenBg(v[1]) : decl;
+      const as = [...text.matchAll(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)/g)]
+        .map(x => parseFloat(x[1]));
+      return as.length ? Math.max(...as) : null;
+    }
+    from = i + 1;
+  }
+}
+
+// [选择器, 上限(超过就是"不够透")]
+const GLASS = [
+  ['.panel {', 0.70],
+  ['.header {', 0.65],
+  ['.subject-trigger {', 0.80],
+  ['.icon-btn {', 0.80],
+  ['.suggestion-chip {', 0.65],
+  ['.chat-input {', 0.70],
+  ['.message.ai .bubble {', 0.78],
+  ['.settings-drawer {', 0.95],
+  ['.modal {', 0.96],
+  ['.subject-menu {', 0.95],
+  ['.file-item {', 0.60],
+  ['.meta-tag {', 0.65],
+  ['.problem-card {', 0.70],
+  ['.info-cell {', 0.65],
+  ['.action-bar {', 0.55],
+  ['.panel-header {', 0.55],
+  ['.ghost-btn {', 0.65],
+  ['.subject-search {', 0.70]
+];
+
+GLASS.forEach(([sel, ceil]) => {
+  const a = bgAlphaOf(sel);
+  if (a === null) { ok(`${sel} 能取到背景色`, false, null); return; }
+  ok(`${sel} 最大 alpha ${a} ≤ ${ceil}`, a <= ceil, a);
+});
+
+// 浮层必须比面板实(里面有正文),但也不能回到实色
+const aPanel = bgAlphaOf('.panel {');
+const aDrawer = bgAlphaOf('.settings-drawer {');
+ok('抽屉比面板实(保证正文可读)', aDrawer > aPanel, { panel: aPanel, drawer: aDrawer });
+ok('抽屉未回到实色', aDrawer < 0.96, aDrawer);
+
+// 降级兜底:不支持 backdrop-filter 时才允许接近实色,别被顺手调透
+ok('@supports not 的兜底仍是接近实色(0.94)',
+   /@supports not[\s\S]{0,600}?background: rgba\(255, 255, 255, \.94\)/.test(HTML));
+
+// 模糊/饱和度令牌仍在(通透靠降 alpha,不靠去掉模糊)
+ok('--glass-blur 仍是 blur(...)', /--glass-blur:\s*blur\(\d+px\)/.test(HTML));
+ok('--glass-blur 带 saturate', /--glass-blur:\s*blur\(\d+px\)\s*saturate\(\d+%\)/.test(HTML));
+
 console.log('\n========== ' + (pass + fail) + ' 项:' + pass + ' PASS / ' + fail + ' FAIL ==========');
 process.exit(fail ? 1 : 0);

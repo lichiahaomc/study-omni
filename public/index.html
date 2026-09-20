@@ -101,11 +101,11 @@
     --dur-slow: .38s;
 
     /* ===== 液态玻璃 Liquid Glass ===== */
-    --glass-tint: linear-gradient(135deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.55) 45%, rgba(255,255,255,.72) 100%);
-    --glass-tint-strong: linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.70) 55%, rgba(255,255,255,.88) 100%);
-    --glass-edge: rgba(255, 255, 255, 0.75);
-    --glass-blur: blur(18px) saturate(190%) brightness(1.06);
-    --glass-blur-soft: blur(12px) saturate(150%) brightness(1.03);
+    --glass-tint: linear-gradient(135deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.36) 45%, rgba(255,255,255,.52) 100%);
+    --glass-tint-strong: linear-gradient(135deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.56) 55%, rgba(255,255,255,.70) 100%);
+    --glass-edge: rgba(255, 255, 255, 0.62);
+    --glass-blur: blur(20px) saturate(200%) brightness(1.03);
+    --glass-blur-soft: blur(14px) saturate(170%) brightness(1.02);
     /* 多层内阴影 = 玻璃厚度的边缘折射高光 */
     --glass-refract:
       0 6px 22px rgba(15, 23, 42, .10),
@@ -301,7 +301,7 @@
 
   /* 暗色主题:底部导航也要跟着暗下来,否则一条亮条压在暗页面上很跳 */
   [data-theme="dark"] .tabbar {
-    background: linear-gradient(180deg, rgba(24, 33, 52, .74), rgba(15, 22, 38, .94));
+    background: linear-gradient(180deg, rgba(24, 33, 52, .62), rgba(15, 22, 38, .86));
     border-top-color: rgba(255, 255, 255, .10);
     box-shadow:
       0 -8px 28px rgba(0, 0, 0, .34),
@@ -345,9 +345,9 @@
     padding: 0 24px;
     padding-top: var(--safe-t);   /* 刘海 / 状态栏 */
     box-sizing: border-box;
-    background: linear-gradient(135deg, rgba(255,255,255,.74), rgba(255,255,255,.46));
-    backdrop-filter: blur(20px) saturate(185%);
-    -webkit-backdrop-filter: blur(20px) saturate(185%);
+    background: linear-gradient(135deg, rgba(255,255,255,.56), rgba(255,255,255,.32));
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
     border-bottom: 1px solid rgba(255, 255, 255, .66);
     box-shadow:
       0 4px 22px rgba(15, 23, 42, .06),
@@ -499,9 +499,9 @@
     min-width: 244px;
     padding: 6px;
     border-radius: var(--radius);
-    background: linear-gradient(160deg, rgba(255,255,255,.96), rgba(248,250,252,.90));
-    backdrop-filter: blur(32px) saturate(150%) brightness(1.02);
-    -webkit-backdrop-filter: blur(32px) saturate(150%) brightness(1.02);
+    background: linear-gradient(160deg, rgba(255,255,255,.90), rgba(248,250,252,.82));
+    backdrop-filter: blur(36px) saturate(170%) brightness(1.02);
+    -webkit-backdrop-filter: blur(36px) saturate(170%) brightness(1.02);
     border: 1px solid rgba(255, 255, 255, .88);
     box-shadow: var(--card-shadow);
     z-index: 50;
@@ -555,7 +555,7 @@
   }
   .subject-option:hover,
   .subject-option:focus-visible {
-    background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(238,242,255,.70));
+    background: linear-gradient(135deg, rgba(255,255,255,.76), rgba(238,242,255,.52));
     border-color: rgba(255, 255, 255, .96);
     color: var(--text);
     /* 用左右 padding 互换实现"右移 3px":总宽不变所以不会撑出滚动区域,
@@ -587,7 +587,7 @@
     padding: 7px 11px;
     border-radius: 10px;
     border: 1px solid rgba(148, 163, 184, .30);
-    background: rgba(255, 255, 255, .74);
+    background: rgba(255, 255, 255, .58);
     color: var(--text);
     font-family: inherit;
     font-size: calc(12px * var(--font-scale, 1));
@@ -658,7 +658,7 @@
     position: absolute;
     inset: -2.5px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(226,232,240,.42));
+    background: linear-gradient(135deg, rgba(255,255,255,.44), rgba(226,232,240,.32));
     filter: url(#liquid-edge);
     z-index: -1;
     opacity: .88;
@@ -738,9 +738,9 @@
 
   /* Panel base */
   .panel {
-    background: linear-gradient(160deg, rgba(255,255,255,.80), rgba(255,255,255,.58));
-    backdrop-filter: blur(22px) saturate(155%);
-    -webkit-backdrop-filter: blur(22px) saturate(155%);
+    background: linear-gradient(160deg, rgba(255,255,255,.60), rgba(255,255,255,.42));
+    backdrop-filter: blur(26px) saturate(175%);
+    -webkit-backdrop-filter: blur(26px) saturate(175%);
     border: 1px solid rgba(255, 255, 255, .72);
     border-radius: var(--radius-lg);
     display: flex; flex-direction: column;
@@ -754,7 +754,7 @@
   .panel-header {
     padding: 15px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, .60);
-    background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(255,255,255,.20));
+    background: linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.16));
     font-size: calc(13px * var(--font-scale, 1));
     font-weight: var(--fw-semibold);
     letter-spacing: .1px;
@@ -970,7 +970,7 @@
     display: flex; align-items: center; gap: 12px;
     padding: 11px 13px;
     border-radius: var(--radius-sm);
-    background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.30));
+    background: linear-gradient(135deg, rgba(255,255,255,.44), rgba(255,255,255,.24));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .50);
@@ -982,7 +982,7 @@
                 box-shadow var(--dur) var(--ease-out);
   }
   .file-item:hover {
-    background: linear-gradient(135deg, rgba(255,255,255,.80), rgba(255,255,255,.48));
+    background: linear-gradient(135deg, rgba(255,255,255,.66), rgba(255,255,255,.38));
     border-color: rgba(255, 255, 255, .95);
     /* 同 .subject-option:用等宽 padding 互换做右移,避免撑出横向滚动区域
        (transform 保持给删除时的 translateX 滑出动画用) */
@@ -1039,7 +1039,7 @@
     50% { opacity: 0.4; }
   }
   .file-remove {
-    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+    background: linear-gradient(135deg, rgba(255,255,255,.50), rgba(255,255,255,.28));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .58);
@@ -1084,7 +1084,7 @@
   .ghost-btn {
     padding: 6px 13px;
     border-radius: 10px;
-    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+    background: linear-gradient(135deg, rgba(255,255,255,.50), rgba(255,255,255,.28));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .60);
@@ -1101,7 +1101,7 @@
   }
   .ghost-btn:hover {
     color: var(--text);
-    background: linear-gradient(135deg, rgba(255,255,255,.90), rgba(255,255,255,.58));
+    background: linear-gradient(135deg, rgba(255,255,255,.74), rgba(255,255,255,.46));
     border-color: rgba(255, 255, 255, .98);
     transform: translateY(-2px) scale(1.03);
     box-shadow: var(--shadow-3), inset 0 1px 1px rgba(255, 255, 255, .98);
@@ -1122,7 +1122,7 @@
     padding: 17px;
     border-radius: 50%;
     color: var(--primary);
-    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.30));
+    background: linear-gradient(135deg, rgba(255,255,255,.50), rgba(255,255,255,.24));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .62);
@@ -1153,7 +1153,7 @@
   .meta-tag {
     padding: 6px 12px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255,255,255,.64), rgba(255,255,255,.38));
+    background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(255,255,255,.30));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .62);
@@ -1198,7 +1198,7 @@
   }
 
   .problem-card {
-    background: linear-gradient(135deg, rgba(255,255,255,.70), rgba(255,255,255,.44));
+    background: linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.36));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     padding: 18px 20px;
@@ -1242,7 +1242,7 @@
   }
   .info-cell {
     padding: 12px 15px;
-    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.36));
+    background: linear-gradient(135deg, rgba(255,255,255,.50), rgba(255,255,255,.28));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border-radius: var(--radius-sm);
@@ -1275,7 +1275,7 @@
     display: flex; gap: 10px;
     padding: 14px 20px;
     border-top: 1px solid rgba(255, 255, 255, .60);
-    background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(255,255,255,.24));
+    background: linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.18));
   }
   .btn {
     position: relative;
@@ -1405,7 +1405,7 @@
                 box-shadow var(--dur-slow) var(--ease-out);
   }
   .message.ai .bubble {
-    background: linear-gradient(135deg, rgba(255,255,255,.80), rgba(255,255,255,.54));
+    background: linear-gradient(135deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .64);
@@ -1606,7 +1606,7 @@
     scroll-snap-align: start;
     padding: 7px 10px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255,255,255,.66), rgba(255,255,255,.38));
+    background: linear-gradient(135deg, rgba(255,255,255,.54), rgba(255,255,255,.30));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border: 1px solid rgba(255, 255, 255, .62);
@@ -1638,7 +1638,7 @@
   .chat-input {
     display: flex; align-items: flex-end;
     gap: 8px;
-    background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.46));
+    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.38));
     backdrop-filter: var(--glass-blur-soft);
     -webkit-backdrop-filter: var(--glass-blur-soft);
     border-radius: var(--radius);
@@ -1650,7 +1650,7 @@
     transition: all .25s cubic-bezier(.4, 0, .2, 1);
   }
   .chat-input:focus-within {
-    background: linear-gradient(135deg, rgba(255,255,255,.90), rgba(255,255,255,.64));
+    background: linear-gradient(135deg, rgba(255,255,255,.76), rgba(255,255,255,.52));
     border-color: rgba(var(--primary-rgb), .55);
     box-shadow:
       0 0 0 4px rgba(var(--primary-rgb), .10),
@@ -1843,12 +1843,12 @@
 
   /* ---- 面板层 ---- */
   [data-theme="dark"] .header {
-    background: linear-gradient(135deg, rgba(30, 41, 59, .74), rgba(15, 23, 42, .60));
+    background: linear-gradient(135deg, rgba(30, 41, 59, .60), rgba(15, 23, 42, .46));
     border-bottom-color: rgba(255, 255, 255, .12);
     box-shadow: 0 4px 22px rgba(0, 0, 0, .36), inset 0 1px 1px rgba(255, 255, 255, .14);
   }
   [data-theme="dark"] .panel {
-    background: linear-gradient(160deg, rgba(30, 41, 59, .70), rgba(15, 23, 42, .56));
+    background: linear-gradient(160deg, rgba(30, 41, 59, .58), rgba(15, 23, 42, .44));
     border-color: rgba(255, 255, 255, .13);
     box-shadow:
       0 14px 44px rgba(0, 0, 0, .44),
@@ -2074,7 +2074,7 @@
 
   [data-theme="dark"] .subject-menu {
     /* 暗色同样走磨砂:底色更实,避免菜单与背后的光斑糊成一片 */
-    background: linear-gradient(160deg, rgba(30, 41, 59, .97), rgba(15, 23, 42, .94));
+    background: linear-gradient(160deg, rgba(30, 41, 59, .90), rgba(15, 23, 42, .84));
     border-color: rgba(255, 255, 255, .16);
     box-shadow:
       0 2px 8px rgba(0, 0, 0, .42),
@@ -2107,7 +2107,7 @@
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .22);
   }
   [data-theme="dark"] .subject-group-label {
-    background: linear-gradient(180deg, rgba(24, 33, 52, .98) 60%, rgba(24, 33, 52, 0));
+    background: linear-gradient(180deg, rgba(24, 33, 52, .94) 60%, rgba(24, 33, 52, 0));
   }
   [data-theme="dark"] .subject-list::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .34); }
 
@@ -2256,9 +2256,9 @@
     top: 0; right: 0; bottom: 0;
     width: min(420px, 100vw);
     display: flex; flex-direction: column;
-    background: linear-gradient(160deg, rgba(255,255,255,.97), rgba(248,250,252,.94));
-    backdrop-filter: blur(30px) saturate(160%);
-    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    background: linear-gradient(160deg, rgba(255,255,255,.90), rgba(248,250,252,.84));
+    backdrop-filter: blur(34px) saturate(178%);
+    -webkit-backdrop-filter: blur(34px) saturate(178%);
     border-left: 1px solid rgba(255, 255, 255, .86);
     box-shadow: -20px 0 60px rgba(15, 23, 42, .16), inset 1px 0 1px rgba(255, 255, 255, .9);
     transform: translateX(102%);
@@ -2439,9 +2439,9 @@
     max-height: calc(100dvh - 40px);
     display: flex; flex-direction: column;
     border-radius: var(--radius-lg, 18px);
-    background: linear-gradient(160deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .96));
-    backdrop-filter: blur(30px) saturate(160%);
-    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    background: linear-gradient(160deg, rgba(255, 255, 255, .92), rgba(248, 250, 252, .86));
+    backdrop-filter: blur(34px) saturate(178%);
+    -webkit-backdrop-filter: blur(34px) saturate(178%);
     border: 1px solid rgba(255, 255, 255, .88);
     box-shadow: 0 24px 70px rgba(15, 23, 42, .22), inset 1px 1px 1px rgba(255, 255, 255, .9);
     opacity: 0;
@@ -2450,7 +2450,7 @@
     outline: none;
   }
   [data-theme="dark"] .modal {
-    background: linear-gradient(160deg, rgba(30, 41, 59, .97), rgba(15, 23, 42, .96));
+    background: linear-gradient(160deg, rgba(30, 41, 59, .90), rgba(15, 23, 42, .86));
     border-color: rgba(255, 255, 255, .12);
     box-shadow: 0 24px 70px rgba(0, 0, 0, .5), inset 1px 1px 1px rgba(255, 255, 255, .08);
   }
@@ -2753,7 +2753,7 @@
 
   /* 设置抽屉的暗色覆盖 */
   [data-theme="dark"] .settings-drawer {
-    background: linear-gradient(160deg, rgba(30, 41, 59, .97), rgba(15, 23, 42, .95));
+    background: linear-gradient(160deg, rgba(30, 41, 59, .90), rgba(15, 23, 42, .85));
     border-left-color: rgba(255, 255, 255, .13);
     box-shadow: -20px 0 60px rgba(0, 0, 0, .56), inset 1px 0 1px rgba(255, 255, 255, .10);
   }
@@ -2964,7 +2964,7 @@
       align-items: stretch;
       gap: 4px;
       padding: 6px 10px calc(6px + var(--safe-b));
-      background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.88));
+      background: linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,.74));
       backdrop-filter: blur(30px) saturate(190%);
       -webkit-backdrop-filter: blur(30px) saturate(190%);
       border-top: 1px solid rgba(255, 255, 255, .82);
