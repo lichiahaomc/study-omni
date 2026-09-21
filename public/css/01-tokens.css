@@ -1,10 +1,10 @@
 /* ▼ 自动生成,请勿手改本文件头 ▼
-   css/01-tokens.css  —— 设计令牌 / 排版层级 / 投影 / 间距 / 动效曲线
+   css/01-tokens.css  —— 整块 :root 变量 —— 设计令牌 / 排版 / 投影 / 间距 / 动效 / 液态玻璃
 
    本文件由 scripts/split.mjs 从 public/index.html 切出。
    ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
       CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
-   ===== 文件头结束(以下为原样切出的内容)=====
+   ===== 文件头结束(以下为原样切出的内容) ===== */
   /* ===== 设计令牌:字号缩放 / 移动端尺寸 / 颜色 / 圆角 =====
      主题色只动 --primary* 那一组;所有带透明度的场合都用 RGB 三元组变量,
      换色时才不会漏掉某处。 */
@@ -102,3 +102,25 @@
     --dur: .24s;
     --dur-slow: .38s;
 
+    /* ===== 液态玻璃 Liquid Glass ===== */
+    --glass-tint: linear-gradient(135deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.36) 45%, rgba(255,255,255,.52) 100%);
+    --glass-tint-strong: linear-gradient(135deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.56) 55%, rgba(255,255,255,.70) 100%);
+    --glass-edge: rgba(255, 255, 255, 0.62);
+    --glass-blur: blur(20px) saturate(200%) brightness(1.03);
+    --glass-blur-soft: blur(14px) saturate(170%) brightness(1.02);
+    /* 多层内阴影 = 玻璃厚度的边缘折射高光 */
+    --glass-refract:
+      0 6px 22px rgba(15, 23, 42, .10),
+      0 2px 6px rgba(15, 23, 42, .05),
+      inset 0 1.5px 1px rgba(255, 255, 255, .98),
+      inset 0 -1px 1px rgba(255, 255, 255, .40),
+      inset 0 0 22px rgba(255, 255, 255, .30),
+      inset 0 -8px 20px rgba(var(--primary-rgb), .05);
+    --glass-refract-hover:
+      0 10px 30px rgba(15, 23, 42, .13),
+      0 3px 10px rgba(15, 23, 42, .06),
+      inset 0 1.5px 1px rgba(255, 255, 255, 1),
+      inset 0 -1px 1px rgba(255, 255, 255, .50),
+      inset 0 0 28px rgba(255, 255, 255, .45),
+      inset 0 -10px 24px rgba(var(--primary-rgb), .09);
+  }

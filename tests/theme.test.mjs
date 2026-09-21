@@ -435,6 +435,40 @@ ok('内联脚本在任何外部脚本之前',
 ok('css 文件里没有混进 HTML', cssFiles.every(x =>
    !/<\/(style|script)>/.test(fs.readFileSync(path.join(PUB_DIR, 'css', x), 'utf8'))));
 
+section('切出来的文件:注释必须收尾');
+
+/* ⚠️ 生成的文件头是一段注释,**末尾必须有注释结束符**。
+   踩过:漏了收尾符 → 这个未闭合的注释一路吞到正文里第一个注释结束符为止。
+   之前一直没露馅纯属侥幸 —— 各文件正文开头正好是分节横幅,被吞的只是横幅本身;
+   直到 02-shell.css 的开头变成 `* { box-sizing: border-box; margin: 0; padding: 0 }`
+   这行真代码被整个吞掉,reset 没了、body 拿回 UA 默认的 8px margin,
+   页面顶部多一条白边、整体高 32px、底部被截。
+
+   判据:把注释剥掉之后,每个文件里**原本的代码必须还在**。 */
+// PUB_DIR 在上一节「目录结构」里已经声明过,这里直接复用
+const stripCssComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
+
+[...fs.readdirSync(path.join(PUB_DIR, 'css')).sort()].forEach(x => {
+  const raw = fs.readFileSync(path.join(PUB_DIR, 'css', x), 'utf8');
+  const code = stripCssComments(raw);
+  ok('css/' + x + ' 剥掉注释后仍有 CSS', code.indexOf('{') >= 0 && code.indexOf('}') >= 0);
+});
+// 这条是那次事故的直接固化:reset 规则必须活过"剥注释"
+// 这条是那次事故的直接固化:reset 必须是**剥掉注释后的第一条规则**。
+// 不能只断言"文件里含 box-sizing" —— 别处还有别的规则也写了这个属性,那样太松。
+const shell = stripCssComments(fs.readFileSync(path.join(PUB_DIR, 'css', '02-shell.css'), 'utf8'));
+ok('02-shell.css 剥掉注释后,第一条规则就是 reset',
+   shell.trimStart().startsWith('* { box-sizing: border-box'), shell.trimStart().slice(0, 50));
+ok('02-shell.css 的 html,body 高度规则还在', shell.includes('html, body { height: 100%;'));
+
+// JS 同理:剥掉注释后仍要是合法 JS(未闭合的注释会把代码吞成语法错误)
+[...fs.readdirSync(path.join(PUB_DIR, 'js')).sort()].forEach(x => {
+  const raw = fs.readFileSync(path.join(PUB_DIR, 'js', x), 'utf8');
+  let err = null;
+  try { new Function(stripCssComments(raw)); } catch (e) { err = e.message; }
+  ok('js/' + x + ' 剥掉注释后仍是合法 JS', !err, err);
+});
+
 section('源码索引');
 
 // 单文件近 8000 行,靠一份**生成出来**的目录导航。下面几条守的都是踩过的坑。

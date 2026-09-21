@@ -4,7 +4,7 @@
    本文件由 scripts/split.mjs 从 public/index.html 切出。
    ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
       CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
-   ===== 文件头结束(以下为原样切出的内容)=====
+   ===== 文件头结束(以下为原样切出的内容) ===== */
   /* ===== 主题色调色板(默认绿色,:root 即 green)===== */
   :root[data-brand="green"]  { --primary:#10b981; --primary-hover:#059669; --primary-2:#34d399; --primary-rgb:16,185,129; --primary-2-rgb:52,211,153; --primary-tint:#6ee7b7; --primary-tint-rgb:110,231,183; --primary-2-tint:#a7f3d0; --primary-2-tint-rgb:167,243,208; --primary-tint-2:#a7f3d0; }
   :root[data-brand="indigo"] { --primary:#6366f1; --primary-hover:#4f46e5; --primary-2:#8b5cf6; --primary-rgb:99,102,241; --primary-2-rgb:139,92,246; --primary-tint:#a5b4fc; --primary-tint-rgb:165,180,252; --primary-2-tint:#a78bfa; --primary-2-tint-rgb:167,139,250; --primary-tint-2:#c7d2fe; }

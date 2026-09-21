@@ -25,9 +25,17 @@ const ROOT = process.cwd();
 const SRC = path.join(ROOT, 'public', 'index.html');
 const CHECK = process.argv.includes('--check');
 
-const HEAD_END = '   ===== 文件头结束(以下为原样切出的内容)=====';
-/* ⚠️ 头的起始行**不能用 `/* ===== … ===== *\/` 那种分节横幅的写法** ——
-   否则 toc.mjs 扫描分节时会把它当成一条真分节收进索引(踩过)。 */
+const HEAD_END = '   ===== 文件头结束(以下为原样切出的内容) ===== */';
+/* ⚠️ 文件头是一段**注释**,末尾必须有「星号 + 斜杠」收尾。
+   第一版漏了 —— 于是这个未闭合的注释开头会一路吞到内容里第一个注释结束符为止。
+   之前一直没出事纯属侥幸:内容开头正好是一条分节横幅,
+   被吞掉的只是横幅本身;直到 02-shell.css 的开头变成
+   `* { box-sizing: border-box; margin: 0; padding: 0 }` —— 一行真代码,
+   被整个吞掉,页面立刻塌(reset 没了,body 拿回 UA 默认的 8px margin)。
+
+   顺带一条:**写这段注释时我自己又踩了同一个坑** ——
+   在注释里写出注释结束符的字面量,注释当场就闭合了,后面的中文变成代码,
+   脚本直接语法错误。解释"为什么不能这样写"的注释,最容易犯这个错。 */
 const header = (file, what) => [
   '/* ▼ 自动生成,请勿手改本文件头 ▼',
   '   ' + file + '  —— ' + what,
@@ -38,10 +46,12 @@ const header = (file, what) => [
   HEAD_END,
 ].join('\n') + '\n';
 
-/* 1-based 闭区间。切点都落在分节横幅上 */
+/* 1-based 闭区间。切点都落在分节横幅上 ——
+   ⚠️ 但"是横幅"不等于"是顶层边界",脚本会把落在未闭合花括号里的切点自动往后吸,
+   所以下面写的起点是**意图**,实际起点以脚本输出为准。 */
 const CSS_CHUNKS = [
-  ['css/01-tokens.css', '设计令牌 / 排版层级 / 投影 / 间距 / 动效曲线', 80, 176],
-  ['css/02-shell.css', '液态玻璃 / 氛围光斑 / 自定义背景 / 底部导航条 / 布局 / 学科选择器 / 栏间拖拽手柄', 177, 856],
+  ['css/01-tokens.css', '整块 :root 变量 —— 设计令牌 / 排版 / 投影 / 间距 / 动效 / 液态玻璃', 80, 176],
+  ['css/02-shell.css', '重置与 body 基线 / 氛围光斑 / 自定义背景 / 底部导航条 / 布局 / 学科选择器 / 栏间拖拽手柄', 177, 856],
   ['css/03-panels.css', 'Left: Upload / Center: Result / 共享控件规则 / Right: Chat', 857, 1842],
   ['css/04-dark.css', '优雅降级(不支持 backdrop-filter)/ 暗色主题', 1843, 2348],
   ['css/05-features.css', '设置抽屉 / 自定义 API / 通用弹窗 / 图片裁剪 / 收藏夹 / 密度 / 提示条 / 无障碍 / 公式 / 已收藏状态', 2349, 3299],
@@ -107,7 +117,117 @@ if (styleOpen < 0) {
 
 const slice = (a, b) => L.slice(a - 1, b).join('\n');   // 1-based 闭区间
 
+/* ===== 安全切点 =====
+   ⚠️ 光看"这里是不是一条分节横幅"不够 —— 横幅只说明**语义上**是新一节,
+   不代表**语法上**是顶层边界。踩过的坑:`:root {` 那一大块横跨了
+   设计令牌 / 排版 / 阴影 / 间距 / 动效 / 液态玻璃 六个横幅,
+   把切点放在横幅上 → 前一个文件 `{` 没闭合,后一个文件开头成了一堆游离声明;
+   CSS 解析器在顶层会把它们一路吞到下一个 `{`,**连带把紧随其后的
+   `* { box-sizing: border-box; margin: 0; padding: 0 }` 整条丢掉**。
+   结果 body 拿回 UA 默认的 8px margin、box-sizing 变回 content-box,
+   页面顶部多一条白边、整体高 32px、底部被截。
+
+   所以切点必须满足:**该行结束时大括号深度为 0,且不在注释里。**
+   下面的扫描器算出每行结束时的深度,请求的切点会自动往后吸到最近的合法位置。 */
+function braceDepthPerLine(lines) {
+  const depths = new Array(lines.length).fill(0);
+  let depth = 0, inComment = false, quote = null;
+  lines.forEach((line, i) => {
+    for (let k = 0; k < line.length; k++) {
+      const c = line[k], next = line[k + 1];
+      if (inComment) {
+        if (c === '*' && next === '/') { inComment = false; k++; }
+        continue;
+      }
+      if (quote) {
+        if (c === '\\') { k++; continue; }
+        if (c === quote) quote = null;
+        continue;
+      }
+      if (c === '/' && next === '*') { inComment = true; k++; continue; }
+      if (c === '"' || c === "'") { quote = c; continue; }
+      if (c === '{') depth++;
+      else if (c === '}') depth--;
+    }
+    depths[i] = depth;
+    // 跨行的注释/字符串在行末结束,下一行重新开始 —— 这里刻意保守:
+    // CSS 里跨行的注释/字符串极少,保守处理只会让切点往后挪,不会切坏。
+    if (inComment) inComment = true;
+    if (quote) quote = null;
+  });
+  return depths;
+}
+
+/** 把请求的切点往后吸到最近的合法边界(切点**上一行**结束时深度为 0),返回新的起点行号 */
+function snapStarts(starts, depthAtEndOf, lastLine, what) {
+  const out = [starts[0]];
+  for (let i = 1; i < starts.length; i++) {
+    let s = starts[i];
+    while (s <= lastLine && depthAtEndOf(s - 1) !== 0) s++;
+    if (s > lastLine) { console.error('✗ ' + what + ' 找不到合法切点(起点 ' + starts[i] + ')'); process.exit(1); }
+    if (s !== starts[i]) {
+      console.log('  · ' + what + ' 切点 ' + starts[i] + ' → ' + s + '(落在未闭合的花括号里,往后吸到安全边界)');
+    }
+    out.push(s);
+  }
+  return out;
+}
+
 /* ---------- 切 ---------- */
+const cssDepthArr = braceDepthPerLine(L.slice(styleOpen, styleClose + 1));  // [0] 对应第 styleOpen 行
+/* 「第 n 行**结束时**的深度」= 数组下标 (n - 1) - base */
+const mkDepthBefore = (base, arr) => lineNo => {
+  const i = lineNo - 1 - base;
+  return (i < 0 || i >= arr.length) ? 0 : arr[i];
+};
+
+/* CSS 用花括号配平判断就够了 —— CSS 的词法只有注释和字符串两种坑,都处理了。
+   ⚠️ JS **不能**用同一套:模板字符串 `${}`、`//` 行注释里的花括号、正则里的
+   `{2,}` 都会让手写扫描器算错(实测在 5165 行算成深度 1,其实那一层早就闭合了)。
+   所以 JS 直接用**真正的解析器**来判断:能通过 `new Function(body)` 的地方才是合法边界。
+   未闭合的 `{`、未结束的模板字符串、没关掉的注释都会让解析失败 —— 这正是我们要的信号。 */
+const jsValid = (from, to) => {
+  if (to < from) return true;                     // 空片段当然是合法的
+  try { new Function(L.slice(from - 1, to).join('\n')); return true; }
+  catch { return false; }
+};
+
+const CSS_STARTS = snapStarts(CSS_CHUNKS.map(c => c[2]),
+  mkDepthBefore(styleOpen, cssDepthArr), styleClose, 'CSS');
+
+const JS_STARTS = (() => {
+  const req = JS_CHUNKS.map(c => c[2]);
+  const out = [req[0]];
+  let prev = req[0];
+  console.log('=== 主脚本切点(用解析器逐个试) ===');
+  for (let i = 1; i < req.length; i++) {
+    let s = req[i];
+    if (!jsValid(prev, s - 1)) {
+      const began = s;
+      while (s < jsClose && !jsValid(prev, s - 1)) s++;
+      if (s >= jsClose) { console.error('✗ 主脚本找不到合法切点(起点 ' + began + ')'); process.exit(1); }
+      console.log('  · 切点 ' + began + ' → ' + s + '(前者切在未闭合的代码块里,往后吸到能解析的位置)');
+    } else {
+      console.log('  · 切点 ' + s + '(本来就合法)');
+    }
+    out.push(s);
+    prev = s;
+  }
+  return out;
+})();
+
+/* 吸完之后把起点写回切片定义,终点由下一片的起点推出来。
+   ⚠️ 最后一片的终点是 styleClose / jsClose **本身** —— 那是 0 基索引,
+   正好等于内容最后一行的 1 基行号(踩过:写成 -1 会少分一行)。 */
+CSS_CHUNKS.forEach((c, i) => {
+  c[2] = CSS_STARTS[i];
+  c[3] = (i + 1 < CSS_STARTS.length ? CSS_STARTS[i + 1] - 1 : styleClose);
+});
+JS_CHUNKS.forEach((c, i) => {
+  c[2] = JS_STARTS[i];
+  c[3] = (i + 1 < JS_STARTS.length ? JS_STARTS[i + 1] - 1 : jsClose);
+});
+
 function build(chunks, label, open, close) {
   const out = [];
   let expect = open + 1;
@@ -155,6 +275,42 @@ console.log('=== 自检:切片能否原样拼回 ===');
 const okCss = verify('CSS', css, styleOpen + 2, styleClose);
 const okJs = verify('主脚本', js, jsOpen + 2, jsClose);
 if (!okCss || !okJs) process.exit(1);
+
+/* 自检:每片自己必须是**完整**的。
+   ⚠️ 校验的是 `文件头 + 正文`(也就是真正写进磁盘的内容),不是光看正文 ——
+   文件头那段注释一旦没收尾,会把开头几行代码一起吞掉,只看正文是发现不了的。
+   ⚠️ 两块用不同判据:纯属必要 ——
+   · CSS 用花括号配平(它的词法只有注释和字符串两种坑,手写扫描器够用);
+   · JS 用 `new Function` 试解析(手写扫描器在模板字符串 / `//` 注释 / 正则上
+     会算错,实测在 5165 行误报深度 1 —— 所以那块必须交给真正的解析器)。 */
+console.log('\n=== 自检:每片都是完整的 ===');
+{
+  const bad = [];
+  for (const p of [...css, ...js]) {
+    const full = header(p.file, p.what) + p.body;
+    // 文件头注释必须收尾
+    const cut = full.indexOf(HEAD_END);
+    if (cut < 0 || full.slice(0, cut + HEAD_END.length).indexOf('*/') < 0) {
+      bad.push(p.file + ' 文件头注释没有收尾(缺 */)');
+      continue;
+    }
+    if (p.file.startsWith('css/')) {
+      const d = braceDepthPerLine(full.split('\n'));
+      const last = d.length ? d[d.length - 1] : 0;
+      if (last !== 0) bad.push(p.file + ' 花括号不配平(结尾深度 ' + last + ')');
+    } else {
+      try { new Function(full); }
+      catch (e) { bad.push(p.file + ' 不是合法 JS: ' + e.message); }
+    }
+  }
+  if (bad.length) {
+    console.error('  ✗ ' + bad.length + ' 片不完整:');
+    bad.forEach(b => console.error('    ' + b));
+    process.exit(1);
+  }
+  console.log('  ✓ CSS ' + css.length + ' 片花括号配平 · JS ' + js.length + ' 片都能解析 · 文件头都有收尾');
+}
+
 if (CHECK) { console.log('\n--check 通过(未写任何文件)'); process.exit(0); }
 
 /* ---------- 写 CSS / JS ---------- */
