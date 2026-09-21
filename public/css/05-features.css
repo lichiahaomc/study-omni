@@ -1,0 +1,958 @@
+/* ▼ 自动生成,请勿手改本文件头 ▼
+   css/05-features.css  —— 设置抽屉 / 自定义 API / 通用弹窗 / 图片裁剪 / 收藏夹 / 密度 / 提示条 / 无障碍 / 公式 / 已收藏状态
+
+   本文件由 scripts/split.mjs 从 public/index.html 切出。
+   ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
+      CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
+   ===== 文件头结束(以下为原样切出的内容)=====
+  /* ===== 设置抽屉 ===== */
+  .settings-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    /* 关闭态:整体不可见且不吃事件,避免挡住底下的拖拽手柄 */
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .settings-layer.open { visibility: visible; pointer-events: auto; }
+
+  .settings-scrim {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, .28);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity var(--dur-slow) var(--ease-out);
+  }
+  .settings-layer.open .settings-scrim { opacity: 1; }
+
+  .settings-drawer {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: min(420px, 100vw);
+    display: flex; flex-direction: column;
+    background: linear-gradient(160deg, rgba(255,255,255,.90), rgba(248,250,252,.84));
+    backdrop-filter: blur(34px) saturate(178%);
+    -webkit-backdrop-filter: blur(34px) saturate(178%);
+    border-left: 1px solid rgba(255, 255, 255, .86);
+    box-shadow: -20px 0 60px rgba(15, 23, 42, .16), inset 1px 0 1px rgba(255, 255, 255, .9);
+    transform: translateX(102%);
+    transition: transform var(--dur-slow) var(--ease-out);
+    outline: none;
+  }
+  .settings-layer.open .settings-drawer { transform: translateX(0); }
+
+  .settings-head {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-head-left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .settings-head-icon {
+    width: 34px; height: 34px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), .30), inset 0 1px 1px rgba(255, 255, 255, .5);
+  }
+  .settings-title {
+    font-size: calc(15px * var(--font-scale, 1));
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
+    line-height: 1.3;
+  }
+  .settings-sub {
+    font-size: calc(11px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+    margin-top: 1px;
+  }
+  .settings-close { width: 32px; height: 32px; flex-shrink: 0; }
+
+  .settings-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 18px 28px;
+  }
+
+  .settings-group { padding: 14px 0 6px; }
+  .settings-group + .settings-group { border-top: 1px solid var(--border); }
+  .settings-group-title {
+    font-size: calc(10px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px;
+    padding: 10px 0;
+  }
+  /* 需要整行展示的(分段控件会换行的那种)改为纵向排列 */
+  .settings-row-block { flex-direction: column; align-items: stretch; gap: 10px; }
+  /* 最小可读宽度:中文的 min-content 只有 1 个字宽,
+     一旦被 flex 压到最小就会一字一行变成竖排,这里兜底 */
+  .settings-label { min-width: 5em; }
+  .settings-label-main {
+    display: block;
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    letter-spacing: .1px;
+  }
+  .settings-label-desc {
+    display: block;
+    font-size: calc(11.5px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+  .settings-label-desc b { color: var(--primary); font-weight: 700; }
+
+  /* ===== 自定义 API(BYOK):设置里的密钥 / 地址输入 ===== */
+  .api-fields { display: flex; flex-direction: column; gap: 8px; }
+  .text-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm, 12px);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .72);
+    color: var(--text);
+    font-family: inherit;
+    font-size: calc(12.5px * var(--font-scale, 1));
+    transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  }
+  .text-input::placeholder { color: var(--text-tertiary); }
+  .text-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--ring-focus);
+  }
+  [data-theme="dark"] .text-input {
+    background: rgba(148, 163, 184, .12);
+    border-color: rgba(255, 255, 255, .16);
+  }
+  .api-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .api-state {
+    font-size: calc(11.5px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    color: var(--primary);
+  }
+  .api-note { margin-top: 2px; }
+  /* ---- 主题色色板 ---- */
+  .swatch-group {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: var(--hover);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .swatch-item {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform var(--dur) var(--ease-spring),
+                box-shadow var(--dur) var(--ease-out);
+  }
+  .swatch-dot {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--sw);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, .45),
+      0 1px 3px rgba(15, 23, 42, .25);
+  }
+  .swatch-item:hover { transform: translateY(-1px) scale(1.14); }
+  .swatch-item:active { transform: translateY(0) scale(.94); }
+  .swatch-item[aria-checked="true"] {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--sw);
+  }
+  [data-theme="dark"] .swatch-dot {
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, .35),
+      0 1px 4px rgba(0, 0, 0, .5);
+  }
+
+  /* 「更多」:点开自定义取色器。圆点跟着当前自定义色走,
+     没选过就显示一圈彩虹示意"可以自己挑" */
+  .swatch-more .swatch-dot {
+    background: var(--sw, conic-gradient(
+      from 210deg, #f43f5e, #f59e0b, #10b981, #06b6d4, #6366f1, #a855f7, #f43f5e));
+  }
+  .swatch-more[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--sw, var(--primary)); }
+
+  /* 背景那一行的两个小按钮 */
+  .bg-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  .btn-mini {
+    appearance: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), .38);
+    background: rgba(var(--primary-rgb), .10);
+    color: var(--primary);
+    font-size: calc(12px * var(--font-scale, 1));
+    font-weight: 600;
+    transition: background var(--dur) var(--ease-out),
+                transform var(--dur) var(--ease-spring);
+  }
+  .btn-mini:hover { background: rgba(var(--primary-rgb), .18); transform: translateY(-1px); }
+  .btn-mini:active { transform: translateY(0) scale(.96); }
+  .btn-mini-ghost {
+    border-color: var(--border);
+    background: var(--hover);
+    color: var(--text-secondary);
+  }
+  .btn-mini-ghost:hover { background: var(--hover); border-color: var(--border-strong); }
+  .btn-mini[disabled] { opacity: .45; cursor: default; transform: none; }
+
+  /* ===== 通用弹窗(自定义主题色 / 上传背景共用) =====
+     沿用设置抽屉的浮层写法:关闭时 visibility:hidden + 不吃事件,
+     避免看不见的层挡住底下的拖拽手柄 */
+  .modal-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .modal-layer.open { visibility: visible; pointer-events: auto; }
+  .modal-scrim {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, .34);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity var(--dur-slow) var(--ease-out);
+  }
+  [data-theme="dark"] .modal-scrim { background: rgba(0, 0, 0, .56); }
+  .modal-layer.open .modal-scrim { opacity: 1; }
+  .modal {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: calc(100dvh - 40px);
+    display: flex; flex-direction: column;
+    border-radius: var(--radius-lg, 18px);
+    background: linear-gradient(160deg, rgba(255, 255, 255, .92), rgba(248, 250, 252, .86));
+    backdrop-filter: blur(34px) saturate(178%);
+    -webkit-backdrop-filter: blur(34px) saturate(178%);
+    border: 1px solid rgba(255, 255, 255, .88);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .22), inset 1px 1px 1px rgba(255, 255, 255, .9);
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur-slow) var(--ease-spring);
+    outline: none;
+  }
+  [data-theme="dark"] .modal {
+    background: linear-gradient(160deg, rgba(30, 41, 59, .90), rgba(15, 23, 42, .86));
+    border-color: rgba(255, 255, 255, .12);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .5), inset 1px 1px 1px rgba(255, 255, 255, .08);
+  }
+  .modal-layer.open .modal { opacity: 1; transform: translateY(0) scale(1); }
+  .modal-head {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: calc(15px * var(--font-scale, 1)); font-weight: 700; }
+  .modal-body {
+    padding: 16px 17px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-foot {
+    flex-shrink: 0;
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 13px 17px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 取色器 */
+  .picker-row { display: flex; align-items: center; gap: 14px; }
+  .picker-preview {
+    width: 62px; height: 62px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, .7);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .18), inset 0 1px 2px rgba(255, 255, 255, .5);
+    background: var(--pk, var(--primary));
+    flex-shrink: 0;
+    transition: background var(--dur) var(--ease-out);
+  }
+  .picker-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .picker-hex {
+    width: 100%;
+    padding: 8px 11px;
+    border-radius: var(--radius-sm, 10px);
+    border: 1px solid var(--border);
+    background: var(--surface-2, #fafafb);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: calc(13px * var(--font-scale, 1));
+  }
+  .picker-hex:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--ring-focus); }
+  .picker-hex.bad { border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244, 63, 94, .16); }
+  .picker-note { font-size: calc(11.5px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  .picker-presets { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+  .picker-preset {
+    appearance: none;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: none;
+    background: var(--pc);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .45), 0 1px 3px rgba(15, 23, 42, .22);
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .picker-preset:hover { transform: scale(1.18); }
+  .picker-preset:active { transform: scale(.92); }
+  .picker-preset[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--pc);
+  }
+
+  /* 背景上传 */
+  .bg-drop {
+    position: relative;
+    min-height: 132px;
+    border-radius: var(--radius-md, 14px);
+    border: 1.5px dashed var(--border-strong);
+    background: var(--surface-2, #fafafb);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  }
+  .bg-drop:hover, .bg-drop.dragover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), .07);
+  }
+  .bg-drop-title { font-size: calc(13px * var(--font-scale, 1)); font-weight: 600; }
+  .bg-drop-hint { font-size: calc(11.5px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  .bg-drop.has-image { border-style: solid; padding: 0; min-height: 0; }
+  .bg-drop.has-image img {
+    width: 100%; max-height: 190px; object-fit: cover;
+    border-radius: var(--radius-md, 14px);
+    display: block;
+  }
+  .bg-extract {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm, 10px);
+    background: rgba(var(--primary-rgb), .08);
+    border: 1px solid rgba(var(--primary-rgb), .22);
+  }
+  .bg-extract-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--ex, var(--primary));
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, .5), 0 2px 8px rgba(15, 23, 42, .2);
+    flex-shrink: 0;
+  }
+  .bg-extract-text { font-size: calc(12px * var(--font-scale, 1)); color: var(--text-secondary); }
+  .bg-extract-text b { color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .bg-current {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--text-secondary);
+  }
+
+  /* ===== 图片裁剪(框选题目) =====
+     遮罩用「选框自带超大 box-shadow + 舞台 overflow:hidden」实现 ——
+     比铺四块 div 省事,而且移动/缩放时不用同步四个遮罩块的位置。 */
+  .modal-wide { width: min(880px, 100%); }
+  /* ⚠️ 必须显式关掉横向滚动。.modal-body 是 overflow-y:auto,
+     单轴非 visible 时另一轴会被提升成 auto —— 只要内容宽哪怕多出 1px
+     (手柄在贴边时会伸出图片 12.5px),底部就会冒出一条横向滚动条。
+     宽度换算已按 crop-frame 的内边距算过,这里是兜底。 */
+  #cropModal .modal-body { overflow-x: hidden; }
+  .crop-head-left { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .crop-step {
+    font-size: calc(11.5px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+  /* 四层结构,别合并:
+     .crop-frame    纯留白(14px),给手柄留出溢出的余地
+     .crop-stage    定位基准 + 与图片等大,**不能有 padding**
+     .crop-viewport 与图片等大 + overflow:hidden —— 只用来裁掉选框那个
+                    9999px 的大阴影,绝不能把手柄一起裁了
+     .crop-handles  独立一层,跟着选框走但不受裁剪 —— 否则「全选」或贴边框选时
+                    八个手柄会被视口砍掉一半
+
+     ⚠️ stage 上**不能**用 padding 来留白:绝对定位的包含块是「内边距盒」,
+     而它的原点是**边框内缘**(不是内容起点),所以 left:0 并不等于图片左边 ——
+     给 stage 加 14px padding 会让手柄整体偏移 14px(踩过)。留白必须由外层承担。 */
+  .crop-frame { padding: 14px; }
+  .crop-stage {
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+    touch-action: none;          /* 手机上自己处理手势,别让页面跟着滚 */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: crosshair;
+  }
+  .crop-viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #0b1220;         /* 图片解码出来之前的底色 */
+  }
+  .crop-viewport img {
+    display: block;
+    width: 100%; height: 100%;
+    pointer-events: none;        /* 事件统一由 stage 接,省得算子元素 */
+    -webkit-user-drag: none;
+  }
+  /* ⚠️ 手柄层本身必须 pointer-events:none —— 它跟选框等大,
+     虽然透明但仍是个命中目标,会把框内的点击截走,
+     导致「框内拖动 = 移动」被判成「画新框」。只有圆点自己可点。 */
+  .crop-handles { position: absolute; pointer-events: none; }
+  .crop-h { pointer-events: auto; }
+  /* 还没框选时:整张压暗 + 居中一行引导语。
+     刻意**不**默认选中整张 —— 那样选框铺满图片,用户往里拖只会「移动」它,
+     永远画不出新框,而「拖出一个框」正是这个功能的主操作。 */
+  .crop-stage.is-empty .crop-viewport::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(8, 11, 20, .5);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .crop-hint {
+    position: absolute; inset: 0;
+    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 18px;
+    text-align: center;
+    color: #fff;
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: 600;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+    pointer-events: none;
+  }
+  .crop-stage:not(.is-empty) .crop-hint { display: none; }
+  .crop-box {
+    position: absolute;
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow: 0 0 0 9999px rgba(8, 11, 20, .58);
+    cursor: move;
+  }
+  /* ⚠️ 未框选时必须把选框和手柄整个藏起来。只加 is-empty 变暗是不够的 ——
+     这些元素是复用的,里面还留着**上一张图**的 left/top/width/height:
+     既会显示成一个幽灵框,又会让「往里拖」被判成移动而不是画新框。 */
+  .crop-stage.is-empty .crop-box,
+  .crop-stage.is-empty .crop-handles { display: none; }
+  /* 三分线:一格 33.333%,线画在格子起点。
+     白线 + 紧邻 1px 黑线「双色描边」—— 单用白线在浅色试卷/课本上会看不见,
+     单用黑线在深色照片上又会看不见。 */
+  .crop-box::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right,  rgba(255, 255, 255, .5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, .5) 1px, transparent 1px),
+      linear-gradient(to right,  rgba(0, 0, 0, .3) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, .3) 1px, transparent 1px);
+    background-size: 33.3333% 33.3333%;
+    background-position: 0 0, 0 0, 1px 0, 0 1px;
+    pointer-events: none;
+  }
+  /* 八个手柄,四角 + 四边。
+     ⚠️ 偏移要用 -12.5px 而不是 -11px:绝对定位子元素的包含块是**内边距盒**,
+     会被 1.5px 的边框往里缩,按 -11px 放的话手柄圆点会偏进角内约 1.5px,
+     拖角时的落点也跟着差几像素。 */
+  .crop-h { position: absolute; width: 22px; height: 22px; }
+  .crop-h::after {
+    content: '';
+    position: absolute; inset: 5px;
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+  }
+  .crop-h[data-h="nw"] { left: -12.5px; top: -12.5px;    cursor: nwse-resize; }
+  .crop-h[data-h="n"]  { left: 50%;   top: -12.5px;    margin-left: -12.5px; cursor: ns-resize; }
+  .crop-h[data-h="ne"] { right: -12.5px; top: -12.5px;   cursor: nesw-resize; }
+  .crop-h[data-h="e"]  { right: -12.5px; top: 50%;     margin-top: -12.5px;  cursor: ew-resize; }
+  .crop-h[data-h="se"] { right: -12.5px; bottom: -12.5px; cursor: nwse-resize; }
+  .crop-h[data-h="s"]  { left: 50%;   bottom: -12.5px; margin-left: -12.5px; cursor: ns-resize; }
+  .crop-h[data-h="sw"] { left: -12.5px; bottom: -12.5px; cursor: nesw-resize; }
+  .crop-h[data-h="w"]  { left: -12.5px; top: 50%;      margin-top: -12.5px;  cursor: ew-resize; }
+
+  .crop-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--text-secondary);
+  }
+  .crop-bar .crop-size b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
+
+  /* ===== 收藏夹 ===== */
+  .fav-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), .18);
+    color: var(--primary);
+    font-size: calc(11px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    line-height: 1.6;
+  }
+  [data-theme="dark"] .fav-badge { background: rgba(var(--primary-rgb), .3); color: var(--primary-tint); }
+  #favModal .modal-foot { justify-content: space-between; }
+  .fav-list { display: flex; flex-direction: column; gap: 9px; }
+  .fav-item {
+    position: relative;
+    padding: 11px 38px 11px 13px;
+    border-radius: var(--radius-sm, 12px);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .5);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  }
+  .fav-item:hover { border-color: rgba(var(--primary-rgb), .5); background: rgba(var(--primary-rgb), .07); }
+  [data-theme="dark"] .fav-item { background: rgba(148, 163, 184, .1); }
+  .fav-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .fav-subject {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), .14);
+    color: var(--primary);
+    font-size: calc(11px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+  }
+  [data-theme="dark"] .fav-subject { color: var(--primary-tint); }
+  .fav-time { font-size: calc(11px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  /* 长内容只露两行 —— 收藏夹是"找回"用的,不是阅读界面 */
+  .fav-text {
+    font-size: calc(12.5px * var(--font-scale, 1));
+    color: var(--text-secondary);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .fav-del {
+    position: absolute;
+    top: 9px; right: 9px;
+    width: 22px; height: 22px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: calc(12px * var(--font-scale, 1));
+    line-height: 1;
+    transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+  .fav-del:hover { background: rgba(244, 63, 94, .14); color: var(--danger); }
+  .fav-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: calc(12.5px * var(--font-scale, 1));
+    line-height: 1.8;
+  }
+
+
+  /* ---- 分段控件 ---- */
+  .seg {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--hover);
+    border: 1px solid var(--border);
+  }
+  /* 选项多于三个时竖排,避免在窄抽屉里挤成一团 */
+  .seg-stack { flex-direction: column; border-radius: var(--radius-sm); width: 100%; }
+  .seg-item {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: calc(12px * var(--font-scale, 1));
+    font-weight: var(--fw-medium);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    transition: background var(--dur) var(--ease-out),
+                color var(--dur) var(--ease-out),
+                box-shadow var(--dur) var(--ease-out);
+  }
+  .seg-stack .seg-item {
+    border-radius: 8px;
+    text-align: left;
+    padding: 7px 11px;
+  }
+  .seg-item:hover { color: var(--text); }
+  .seg-item[aria-checked="true"] {
+    background: #fff;
+    color: var(--primary);
+    font-weight: var(--fw-semibold);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .10), inset 0 1px 1px rgba(255, 255, 255, .9);
+  }
+  .seg-item:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+  /* ---- 开关 ---- */
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 42px; height: 24px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--hover);
+    padding: 0;
+    transition: background var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+  }
+  .switch-knob {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .28);
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .switch[aria-checked="true"] {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    border-color: transparent;
+  }
+  .switch[aria-checked="true"] .switch-knob { transform: translateX(18px); }
+  .switch:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+  /* ---- 滑块 ----
+     原来是"假进度":轨道用一条写死的渐变(34% 处色停),滑块拖到哪它都不动,
+     看着像进度条,其实永远停在同一个位置。
+
+     现在:底层灰色底轨 + 上层进度填充。
+     ⚠️ 填充**不能**写成 `background-size: var(--fill) 5px` ——
+     实测这样会解析成 `0px 5px`(自定义属性在多值简写里替换失败),
+     滑块拖到哪填充都不显示。改用 linear-gradient 的色停位置控制:
+     「填充色 0 → 填充色 var(--fill) → 透明 var(--fill) → 透明 100%」,
+     色停是一整条渐变里的位置,不依赖 background-size,稳得多。
+     配合 background-size: 100% 5px 只负责裁出 5px 高的一条。 */
+  .range-wrap { flex-shrink: 0; width: 152px; }
+  .range {
+    /* 底轨色单独一个变量:全局 --border-strong(#d1d5db)在浅色卡片上太淡,
+       滑块拖到低值时"已填充/未填充"的分界几乎看不出来。这里压深一档。 */
+    --track: #b8c0cc;
+    --fill: 0px;
+    --thumb-size: 15px;   /* JS 读它来算填充宽度,别只改 thumb 的 width */
+    appearance: none;
+    width: 100%;
+    height: 22px;
+    cursor: pointer;
+    /* ⚠️ 必须显式清掉 background-color。表单控件的默认背景是白色,
+       亮色下看不出来(背景本来就白),但暗色下这个白底会把整条轨道
+       铺成一根白条,把底轨和填充全盖住 —— 看起来就是"滑块变成白条"。 */
+    background-color: transparent;
+    /* 渐变的两个色停都钉在 var(--fill) 上,左半段有色、右半段透明 */
+    background-image: linear-gradient(90deg,
+      rgba(var(--primary-rgb), .92) 0,
+      rgba(var(--primary-2-rgb), .72) var(--fill),
+      rgba(var(--primary-2-rgb), 0) var(--fill),
+      rgba(var(--primary-2-rgb), 0) 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 5px;
+    background-position: left center;
+    transition: background-image var(--dur) var(--ease-out);
+  }
+  /* 拖动中关掉过渡,否则拇指已经走了填充还在补间,视觉上会脱节 */
+  .range.is-dragging { transition: none; }
+
+  .range::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--track);
+  }
+  .range::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--thumb-size); height: var(--thumb-size);
+    margin-top: -5px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--primary);
+    box-shadow: 0 1px 4px rgba(var(--primary-rgb), .40);
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .range::-webkit-slider-thumb:hover { transform: scale(1.14); }
+  .range:active::-webkit-slider-thumb { transform: scale(1.06); }
+
+  .range::-moz-range-track {
+    height: 5px; border-radius: 999px;
+    background: var(--track);
+  }
+  /* 不能再用 ::-moz-range-progress —— input 背景上已经画了填充,
+     两边都画会叠加成双层色块。让它透明即可,填充统一由 --fill 负责。 */
+  .range::-moz-range-progress {
+    height: 5px;
+    background: transparent;
+  }
+  .range::-moz-range-thumb {
+    width: var(--thumb-size); height: var(--thumb-size);
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--primary);
+    box-shadow: 0 1px 4px rgba(var(--primary-rgb), .40);
+  }
+  .range:focus-visible { outline: none; }
+  .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(var(--primary-rgb), .22); }
+  .range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(var(--primary-rgb), .22); }
+
+  /* ---- 布局 / 关于 ---- */
+  .layout-reset-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .layout-hint { font-size: calc(12px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  .layout-hint b { color: var(--primary); font-weight: 700; }
+
+  .about-card {
+    padding: 13px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-soft);
+    border: 1px solid var(--border);
+  }
+  .about-line {
+    display: flex; align-items: center; gap: 8px;
+    font-size: calc(13px * var(--font-scale, 1)); font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
+  }
+  .about-tag {
+    font-size: calc(10px * var(--font-scale, 1));
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+  .about-desc {
+    font-size: calc(11.5px * var(--font-scale, 1));
+    color: var(--text-secondary);
+    margin-top: 5px;
+    line-height: 1.6;
+  }
+  .about-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .ghost-btn.danger { color: var(--danger); border-color: rgba(239, 68, 68, .38); }
+  .ghost-btn.danger:hover {
+    background: rgba(239, 68, 68, .08);
+    border-color: rgba(239, 68, 68, .6);
+    color: var(--danger);
+  }
+
+  /* 设置抽屉的暗色覆盖 */
+  [data-theme="dark"] .settings-drawer {
+    background: linear-gradient(160deg, rgba(30, 41, 59, .90), rgba(15, 23, 42, .85));
+    border-left-color: rgba(255, 255, 255, .13);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, .56), inset 1px 0 1px rgba(255, 255, 255, .10);
+  }
+  [data-theme="dark"] .settings-scrim { background: rgba(0, 0, 0, .52); }
+  [data-theme="dark"] .seg {
+    background: rgba(148, 163, 184, .12);
+    border-color: rgba(255, 255, 255, .12);
+  }
+  [data-theme="dark"] .seg-item[aria-checked="true"] {
+    background: rgba(var(--primary-rgb), .30);
+    color: var(--primary-tint-2);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .18);
+  }
+  [data-theme="dark"] .switch { background: rgba(148, 163, 184, .18); border-color: rgba(255, 255, 255, .18); }
+  [data-theme="dark"] .switch-knob { background: #e2e8f0; }
+  [data-theme="dark"] .range { --track: rgba(255, 255, 255, .22); }
+  /* 暗色下底轨改成半透白。注意只改 --track,
+     不要再写一条带渐变的 track 背景 —— 那是旧"假进度"的写法,
+     会把底层灰轨覆盖成写死的渐变,滑块又变成拖不动的死条。 */
+  [data-theme="dark"] .range::-webkit-slider-thumb { background: #1e293b; }
+  [data-theme="dark"] .about-card {
+    background: rgba(var(--primary-rgb), .12);
+    border-color: rgba(255, 255, 255, .12);
+  }
+  [data-theme="dark"] .about-tag { background: rgba(var(--primary-rgb), .26); color: var(--primary-tint); }
+
+  /* ===== 紧凑密度 / 关闭动效:由 JS 在 <html> 上切 data 属性驱动 ===== */
+  [data-density="compact"] .panel-header { padding: 10px 16px; }
+  [data-density="compact"] .panel-body { padding: 12px 16px; }
+  [data-density="compact"] .chat-messages { padding: 14px 16px; gap: 11px; }
+  [data-density="compact"] .suggestions { padding: 6px 14px 8px; gap: 5px; }
+  [data-density="compact"] .suggestion-chip { padding: 6px 10px; }
+  [data-density="compact"] .action-bar { padding: 10px 16px; }
+  [data-density="compact"] .upload-zone { padding: 20px 14px; }
+  [data-density="compact"] .message { gap: 8px; }
+  [data-density="compact"] .bubble { padding: 9px 13px; }
+  [data-density="compact"] .settings-row { padding: 8px 0; }
+
+  [data-motion="off"] *,
+  [data-motion="off"] *::before,
+  [data-motion="off"] *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  /* 字号由 JS 写到 --font-scale,所有字号跟随缩放 */
+  body { font-size: calc(14px * var(--font-scale, 1)); }
+
+  /* 窄屏下设置抽屉占满宽度更实用 */
+  @media (max-width: 560px) {
+    .settings-drawer { width: 100vw; border-left: none; }
+    .settings-row { flex-wrap: wrap; }
+    .range-wrap { width: 100%; }
+  }
+
+  /* ===== 轻量提示条 ===== */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    z-index: 200;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: calc(12.5px * var(--font-scale, 1));
+    font-weight: var(--fw-medium);
+    color: #fff;
+    background: rgba(15, 23, 42, .90);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, .28);
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(.96);
+    pointer-events: none;
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring);
+    max-width: min(90vw, 420px);
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  [data-theme="dark"] .toast {
+    background: rgba(226, 232, 240, .94);
+    color: #0f172a;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .5);
+  }
+
+  /* 键盘焦点可见性 */
+  .btn:focus-visible,
+  .ghost-btn:focus-visible,
+  .icon-btn:focus-visible,
+  .suggestion-chip:focus-visible,
+  .subject-trigger:focus-visible,
+  .upload-zone:focus-visible,
+  .send-btn:focus-visible,
+  .file-remove:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-2), var(--ring-focus);
+  }
+  [data-theme="dark"] .btn:focus-visible,
+  [data-theme="dark"] .ghost-btn:focus-visible,
+  [data-theme="dark"] .icon-btn:focus-visible,
+  [data-theme="dark"] .suggestion-chip:focus-visible,
+  [data-theme="dark"] .subject-trigger:focus-visible,
+  [data-theme="dark"] .upload-zone:focus-visible,
+  [data-theme="dark"] .send-btn:focus-visible,
+  [data-theme="dark"] .file-remove:focus-visible {
+    box-shadow: var(--shadow-2), 0 0 0 3px rgba(var(--primary-tint-rgb), .34);
+  }
+
+  /* ===== 无障碍:尊重系统的"减少动态效果"设置 ===== */
+  /* ===== 回答被长度上限截断时的尾部提示 ===== */
+  .truncated-tip {
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px dashed rgba(127, 127, 127, .34);
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--warning, #f59e0b);
+    line-height: 1.6;
+  }
+
+  /* ===== LaTeX 公式(KaTeX) =====
+     KaTeX 的字体和主样式是"按需从 CDN 拉"的(katex.min.css),这里只放
+     一点点落地到本站风格的微调;拉不到时上面这些还负责把公式撑成一个可读的胶囊。 */
+  .math-node { display: inline; }
+  .math-node[data-display="1"] { display: block; }
+
+  /* 纯文本兜底:KaTeX 尚未到达 / 离线 / 公式本身有语法错误时的样子。
+     用 currentColor 保证在绿底的用户气泡里也能读。 */
+  .math-node:not([data-math-done]) {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .92em;
+    padding: .1em .34em;
+    border-radius: 6px;
+    background: rgba(127, 127, 127, .14);
+    color: inherit;
+  }
+  .math-node[data-display="1"]:not([data-math-done]) {
+    text-align: center;
+    margin: 9px 0;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    line-height: 1.6;
+  }
+
+  /* KaTeX 默认是 1.21em,放在气泡里偏大 */
+  .bubble .katex,
+  .problem-card .katex,
+  .result-content .katex { font-size: 1.05em; line-height: inherit; }
+
+  /* 超宽公式改成横向滚动,别把气泡撑破(公式再长也只在自己那行滚) */
+  .math-node .katex-display {
+    margin: 10px 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 0;
+    scrollbar-width: thin;
+  }
+  .math-node[data-display="1"] > .katex-display { margin: 0; }
+
+  /* 暗色 / 用户气泡下把行线和根号描边压暗一点,避免发灰发白 */
+  [data-theme="dark"] .math-node:not([data-math-done]) { background: rgba(255, 255, 255, .10); }
+  .message.user .bubble .math-node:not([data-math-done]) { background: rgba(0, 0, 0, .16); }
+
+  /* ===== 已收藏状态(收藏按钮点了要看得出来) ===== */
+  .btn.is-on {
+    border-color: rgba(var(--primary-rgb), .55);
+    color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .70);
+  }
+  [data-theme="dark"] .btn.is-on {
+    color: var(--primary-tint);
+    border-color: rgba(var(--primary-tint-rgb), .46);
+    background: rgba(var(--primary-rgb), .26);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .main {
+      grid-template-columns: 260px 1fr 360px;
+      gap: 12px;
+      padding: 12px;
+    }
+    .panel-body { padding: 16px; }
+    .chat-messages { padding: 16px; }
+    .suggestions { padding: 6px 12px 10px; gap: 5px; }
+    .action-bar { padding: 12px 16px; }
+    .panel-header { padding: 14px 16px; }
+  }
+

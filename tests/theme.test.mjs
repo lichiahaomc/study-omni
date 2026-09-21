@@ -21,8 +21,17 @@ const eq = (name, got, want) => ok(name, got === want, { got, want });
 const section = t => console.log('\n=== ' + t + ' ===');
 
 /* ---------- 把 StudyBrand 从 index.html 里抠出来 ---------- */
-const HTML = fs.readFileSync(
-  path.join(process.cwd(), 'public', 'index.html'), 'utf8');
+/* 拆分之后:结构在 public/index.html、样式在 public/css/、脚本在 public/js/。
+   绝大多数断言只关心"这段东西在不在前端源码里",所以这里把三者按序拼成一份 ——
+   等价于拆分前的那个单文件,断言不用逐个改。
+   ⚠️ 需要**区分文件位置**的断言(比如"这段 CSS 到底在哪个文件")不要用这份,
+   去读对应的文件(见「目录结构」一节)。 */
+const PUB = path.join(process.cwd(), 'public');
+const readDir = d => fs.readdirSync(path.join(PUB, d)).sort()
+  .map(f => fs.readFileSync(path.join(PUB, d, f), 'utf8')).join('\n');
+const PAGE = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
+const HTML = readDir('css') + '\n'
+  + fs.readFileSync(path.join(PUB, 'index.html'), 'utf8') + '\n' + readDir('js');
 
 const START = 'window.StudyBrand = (function () {';
 const s = HTML.indexOf(START);
@@ -348,9 +357,9 @@ ok('--glass-blur 带 saturate', /--glass-blur:\s*blur\(\d+px\)\s*saturate\(\d+%\
 section('示例素材(现场没素材时的兜底)');
 
 // 硬约束:前端是"零依赖单文件"。示例图必须**现画**,不能多一个静态资源。
-const pubFiles = fs.readdirSync(path.join(process.cwd(), 'public'));
-ok('public/ 里只有 index.html(单文件约束没被破坏)',
-   pubFiles.length === 1 && pubFiles[0] === 'index.html', pubFiles);
+const pubFiles = fs.readdirSync(path.join(process.cwd(), 'public')).sort();
+ok('public/ 下只有 index.html + css/ + js/(没有多余产物)',
+   JSON.stringify(pubFiles) === JSON.stringify(['css', 'index.html', 'js']), pubFiles);
 ok('示例图是用 canvas 现画的',
    /function buildSampleFile\(\)/.test(HTML) &&
    /createElement\('canvas'\)/.test(HTML.slice(HTML.indexOf('function buildSampleFile'))));
@@ -382,24 +391,68 @@ ok('.bubble 显式设了 min-width: 0',
 ok('公式仍有横向滚动兜底',
    /\.math-node \.katex-display \{[\s\S]{0,200}?overflow-x:\s*auto/.test(HTML));
 
-section('文件目录(TOC)');
+section('目录结构(拆分后)');
+
+const PUB_DIR = path.join(process.cwd(), 'public');
+const cssFiles = fs.readdirSync(path.join(PUB_DIR, 'css')).sort();
+const jsFiles = fs.readdirSync(path.join(PUB_DIR, 'js')).sort();
+
+ok('css/ 有 7 个文件', cssFiles.length === 7, cssFiles);
+ok('js/ 有 11 个文件', jsFiles.length === 11, jsFiles);
+ok('css 文件名是 01..07 前缀', cssFiles.every((x, i) =>
+   x.startsWith(String(i + 1).padStart(2, '0'))), cssFiles);
+ok('js 文件名是 01..11 前缀', jsFiles.every((x, i) =>
+   x.startsWith(String(i + 1).padStart(2, '0'))), jsFiles);
+ok('每个 css/js 都是 .css/.js',
+   cssFiles.every(x => x.endsWith('.css')) && jsFiles.every(x => x.endsWith('.js')));
+
+/* ⚠️ 加载顺序必须与文件名顺序一致 —— CSS 级联和 JS 执行都吃顺序,
+   文件名前缀就是用来对齐这个顺序的,错位会出真问题 */
+const linkOrder = [...PAGE.matchAll(/<link[^>]+href="css\/([^"]+)"/g)].map(m => m[1]);
+const scriptOrder = [...PAGE.matchAll(/<script[^>]+src="js\/([^"]+)"/g)].map(m => m[1]);
+ok('index.html 引用了全部 css', JSON.stringify(linkOrder) === JSON.stringify(cssFiles),
+   { linkOrder, cssFiles });
+ok('index.html 引用了全部 js', JSON.stringify(scriptOrder) === JSON.stringify(jsFiles),
+   { scriptOrder, jsFiles });
+
+const PAGE_CODE = PAGE.replace(/<!--[\s\S]*?-->/g, '');   // 剥掉注释再看
+ok('index.html 里已经没有内联 <style> 块', !/<style[\s>]/.test(PAGE_CODE));
+const inlineScripts = [...PAGE_CODE.matchAll(/<script(?![^>]*\bsrc=)[^>]*>/g)];
+ok('只剩一个内联脚本(首屏预初始化)', inlineScripts.length === 1, inlineScripts.length);
+/* 预初始化脚本必须在 <head> 里、且在任何 <script src> 之前 ——
+   它要在首帧前把主题铺好,拆成外部文件会闪一下再变 */
+const headEnd = PAGE_CODE.indexOf('</head>');
+ok('内联脚本在 </head> 之前', PAGE_CODE.indexOf('<script>') < headEnd);
+ok('内联脚本在任何外部脚本之前',
+   PAGE_CODE.indexOf('<script>') < PAGE_CODE.indexOf('<script src='));
+
+/* 每个切出来的文件都带生成头,提醒"别手改顺序" */
+[...cssFiles].forEach(x => ok('css/' + x + ' 带生成头',
+   fs.readFileSync(path.join(PUB_DIR, 'css', x), 'utf8').includes('请勿手改本文件头')));
+[...jsFiles].forEach(x => ok('js/' + x + ' 带生成头',
+   fs.readFileSync(path.join(PUB_DIR, 'js', x), 'utf8').includes('请勿手改本文件头')));
+/* 切出来的文件里不该再出现 <style> / </script> 这种"整段"痕迹 */
+ok('css 文件里没有混进 HTML', cssFiles.every(x =>
+   !/<\/(style|script)>/.test(fs.readFileSync(path.join(PUB_DIR, 'css', x), 'utf8'))));
+
+section('源码索引');
 
 // 单文件近 8000 行,靠一份**生成出来**的目录导航。下面几条守的都是踩过的坑。
-const tocOpen = HTML.indexOf('<!-- ▼ 目录');
-const tocClose = HTML.indexOf('▲ 目录结束 ▲ -->');
-ok('目录块存在', tocOpen >= 0 && tocClose > tocOpen);
+const tocOpen = HTML.indexOf('<!-- ▼ 源码索引');
+const tocClose = HTML.indexOf('▲ 源码索引结束 ▲ -->');
+ok('索引块存在', tocOpen >= 0 && tocClose > tocOpen);
 // ⚠️ 起始行**不能自带 -->** —— 那样它当场就闭合了,后面的目录行变成裸文本,
 // 被解析器从 <head> 挤进 <body>,于是目录显示在页面上(踩过)
-ok('目录起始行不自带 -->(否则注释当场闭合)',
+ok('索引起始行不自带 -->(否则注释当场闭合)',
    HTML.slice(tocOpen, HTML.indexOf('\n', tocOpen)).indexOf('-->') < 0);
-ok('目录正文里没有注释定界符',
+ok('索引正文里没有注释定界符',
    !/<!--|-->/.test(HTML.slice(tocOpen + 30, tocClose)));
 // 放 <head> 里,而不是 doctype 之前 —— 后者有触发怪异模式(quirks)的风险
-ok('目录在 <head> 之内、<style> 之前',
-   tocOpen > HTML.indexOf('<head>') && tocOpen < HTML.indexOf('<style>'));
+ok('索引在 <head> 之内',
+   tocOpen > HTML.indexOf('<head>') && tocOpen < HTML.indexOf('<link '));
 ok('DOCTYPE 之前没有任何内容',
-   /^\s*<!(?:DOCTYPE|doctype) html>/i.test(HTML));
-ok('npm test 会先校验目录',
+   /^\s*<!(?:DOCTYPE|doctype) html>/i.test(PAGE));
+ok('npm test 会先校验索引',
    /"test":\s*"node scripts\/toc\.mjs --check/.test(
      fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')));
 

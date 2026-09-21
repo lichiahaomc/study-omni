@@ -14,7 +14,16 @@ import { fileURLToPath } from 'node:url';
 import { SUBJECTS, KIND_STRATEGY, STAGE_TONE } from '../functions/_lib/prompts.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const HTML = fs.readFileSync(path.join(HERE, '..', 'public', 'index.html'), 'utf8');
+/* 拆分之后:结构在 public/index.html、样式在 public/css/、脚本在 public/js/。
+   绝大多数断言只关心"这段东西在不在前端源码里",所以这里把三者按序拼成一份 ——
+   等价于拆分前的那个单文件,断言不用逐个改。
+   ⚠️ 需要**区分文件位置**的断言(比如"这段 CSS 到底在哪个文件")不要用这份,
+   去读对应的文件(见「目录结构」一节)。 */
+const PUB = path.join(path.join(HERE, '..'), 'public');
+const readDir = d => fs.readdirSync(path.join(PUB, d)).sort()
+  .map(f => fs.readFileSync(path.join(PUB, d, f), 'utf8')).join('\n');
+const HTML = readDir('css') + '\n'
+  + fs.readFileSync(path.join(PUB, 'index.html'), 'utf8') + '\n' + readDir('js');
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => {

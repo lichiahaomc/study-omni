@@ -1,0 +1,45 @@
+/* ▼ 自动生成,请勿手改本文件头 ▼
+   css/07-brand-motion.css  —— 主题色调色板 / 按钮果冻动效
+
+   本文件由 scripts/split.mjs 从 public/index.html 切出。
+   ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
+      CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
+   ===== 文件头结束(以下为原样切出的内容)=====
+  /* ===== 主题色调色板(默认绿色,:root 即 green)===== */
+  :root[data-brand="green"]  { --primary:#10b981; --primary-hover:#059669; --primary-2:#34d399; --primary-rgb:16,185,129; --primary-2-rgb:52,211,153; --primary-tint:#6ee7b7; --primary-tint-rgb:110,231,183; --primary-2-tint:#a7f3d0; --primary-2-tint-rgb:167,243,208; --primary-tint-2:#a7f3d0; }
+  :root[data-brand="indigo"] { --primary:#6366f1; --primary-hover:#4f46e5; --primary-2:#8b5cf6; --primary-rgb:99,102,241; --primary-2-rgb:139,92,246; --primary-tint:#a5b4fc; --primary-tint-rgb:165,180,252; --primary-2-tint:#a78bfa; --primary-2-tint-rgb:167,139,250; --primary-tint-2:#c7d2fe; }
+  :root[data-brand="blue"]   { --primary:#3b82f6; --primary-hover:#2563eb; --primary-2:#60a5fa; --primary-rgb:59,130,246; --primary-2-rgb:96,165,250; --primary-tint:#93c5fd; --primary-tint-rgb:147,197,253; --primary-2-tint:#bfdbfe; --primary-2-tint-rgb:191,219,254; --primary-tint-2:#bfdbfe; }
+  :root[data-brand="violet"] { --primary:#8b5cf6; --primary-hover:#7c3aed; --primary-2:#a78bfa; --primary-rgb:139,92,246; --primary-2-rgb:167,139,250; --primary-tint:#c4b5fd; --primary-tint-rgb:196,181,253; --primary-2-tint:#ddd6fe; --primary-2-tint-rgb:221,214,254; --primary-tint-2:#ddd6fe; }
+  :root[data-brand="rose"]   { --primary:#f43f5e; --primary-hover:#e11d48; --primary-2:#fb7185; --primary-rgb:244,63,94; --primary-2-rgb:251,113,133; --primary-tint:#fda4af; --primary-tint-rgb:253,164,175; --primary-2-tint:#fecdd3; --primary-2-tint-rgb:254,205,211; --primary-tint-2:#fecdd3; }
+  :root[data-brand="cyan"]   { --primary:#06b6d4; --primary-hover:#0891b2; --primary-2:#22d3ee; --primary-rgb:6,182,212; --primary-2-rgb:34,211,238; --primary-tint:#67e8f9; --primary-tint-rgb:103,232,249; --primary-2-tint:#a5f3fc; --primary-2-tint-rgb:165,243,252; --primary-tint-2:#a5f3fc; }
+
+  /* ===== 按钮果冻动效 =====
+     用独立变换属性 translate / rotate / scale(而非 transform),
+     果冻形变会和按钮自身的 hover 位移、气泡动画叠加生效,互不覆盖。 */
+  .is-jelly {
+    translate: var(--jx, 0px) var(--jy, 0px);
+    rotate: var(--jr, 0deg);
+    scale: var(--jsx, 1) var(--jsy, 1);
+    transition: translate .14s var(--ease-out),
+                rotate .14s var(--ease-out),
+                scale .14s var(--ease-out);
+  }
+  /* 松手回弹:挤压 -> 拉伸 -> 回正 */
+  @keyframes jelly-pop {
+    0%   { scale: 1 1; }
+    28%  { scale: .88 1.12; }
+    52%  { scale: 1.09 .91; }
+    74%  { scale: .96 1.04; }
+    100% { scale: 1 1; }
+  }
+  /* 松手:位移/旋转靠 transition 平滑回位,挤压交给 jelly-pop 关键帧回弹 */
+  .is-jelly-release {
+    animation: jelly-pop .55s var(--ease-spring);
+    transition: translate .3s var(--ease-spring), rotate .3s var(--ease-spring);
+  }
+  [data-motion="off"] .is-jelly { translate: 0 0; rotate: 0deg; scale: 1 1; transition: none; }
+  [data-motion="off"] .is-jelly-release { animation: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .is-jelly { translate: 0 0; rotate: 0deg; scale: 1 1; transition: none; }
+    .is-jelly-release { animation: none; }
+  }

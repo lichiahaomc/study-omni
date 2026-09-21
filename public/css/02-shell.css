@@ -1,0 +1,687 @@
+/* ▼ 自动生成,请勿手改本文件头 ▼
+   css/02-shell.css  —— 液态玻璃 / 氛围光斑 / 自定义背景 / 底部导航条 / 布局 / 学科选择器 / 栏间拖拽手柄
+
+   本文件由 scripts/split.mjs 从 public/index.html 切出。
+   ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
+      CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
+   ===== 文件头结束(以下为原样切出的内容)=====
+    /* ===== 液态玻璃 Liquid Glass ===== */
+    --glass-tint: linear-gradient(135deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.36) 45%, rgba(255,255,255,.52) 100%);
+    --glass-tint-strong: linear-gradient(135deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.56) 55%, rgba(255,255,255,.70) 100%);
+    --glass-edge: rgba(255, 255, 255, 0.62);
+    --glass-blur: blur(20px) saturate(200%) brightness(1.03);
+    --glass-blur-soft: blur(14px) saturate(170%) brightness(1.02);
+    /* 多层内阴影 = 玻璃厚度的边缘折射高光 */
+    --glass-refract:
+      0 6px 22px rgba(15, 23, 42, .10),
+      0 2px 6px rgba(15, 23, 42, .05),
+      inset 0 1.5px 1px rgba(255, 255, 255, .98),
+      inset 0 -1px 1px rgba(255, 255, 255, .40),
+      inset 0 0 22px rgba(255, 255, 255, .30),
+      inset 0 -8px 20px rgba(var(--primary-rgb), .05);
+    --glass-refract-hover:
+      0 10px 30px rgba(15, 23, 42, .13),
+      0 3px 10px rgba(15, 23, 42, .06),
+      inset 0 1.5px 1px rgba(255, 255, 255, 1),
+      inset 0 -1px 1px rgba(255, 255, 255, .50),
+      inset 0 0 28px rgba(255, 255, 255, .45),
+      inset 0 -10px 24px rgba(var(--primary-rgb), .09);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    /* 四角错色的深空光晕:每角一个色相,中间留出干净的浅色区给内容。
+       再叠一层斜向柔光带,避免大面积平铺渐变的"塑料感"。 */
+    background:
+      radial-gradient(1100px 780px at 2% -16%,   rgba(var(--primary-rgb), .34), transparent 58%),
+      radial-gradient( 940px 700px at 100% -4%,  rgba(14, 165, 233, .28), transparent 56%),
+      radial-gradient(1080px 820px at 88% 108%,  rgba(217, 70, 239, .22), transparent 60%),
+      radial-gradient( 900px 660px at 6% 100%,   rgba(16, 185, 129, .20), transparent 60%),
+      linear-gradient(118deg,
+        rgba(255, 255, 255, .58) 0%,
+        rgba(255, 255, 255, 0) 34%,
+        rgba(255, 255, 255, 0) 66%,
+        rgba(199, 210, 254, .46) 100%),
+      linear-gradient(168deg, #fcfcff 0%, #f5f7fc 36%, #eef1f9 68%, #e7ebf6 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-size: calc(14px * var(--font-scale, 1));
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+
+  button { font: inherit; cursor: pointer; }
+  textarea { font: inherit; }
+
+  /* ===== 氛围光斑背景:为玻璃提供可折射的内容 ===== */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  /* 细点阵:比线格更轻,但照样给玻璃提供可折射的几何纹理;
+     边缘用径向遮罩淡出,四周留白不抢内容 */
+  .ambient::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(15, 23, 42, .16) 1.1px, transparent 1.2px);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(ellipse 90% 76% at 50% 40%, #000 0%, rgba(0,0,0,.45) 50%, transparent 82%);
+    mask-image: radial-gradient(ellipse 90% 76% at 50% 40%, #000 0%, rgba(0,0,0,.45) 50%, transparent 82%);
+  }
+  /* 极光带:一层缓慢旋转的 conic 渐变,是整张背景的"光源",
+     玻璃掠过它时会折射出方向性的高光,比静态光晕耐看得多 */
+  .aurora {
+    position: absolute;
+    top: -34%; left: -22%;
+    width: 144%; height: 96%;
+    background: conic-gradient(from 205deg at 50% 50%,
+      transparent 0deg,
+      rgba(var(--primary-tint-rgb), .26) 52deg,
+      transparent 122deg,
+      rgba(56, 189, 248, .22) 196deg,
+      transparent 268deg,
+      rgba(244, 114, 182, .18) 330deg,
+      transparent 360deg);
+    filter: blur(88px);
+    will-change: transform;
+    animation: aurora 52s ease-in-out infinite;
+  }
+  @keyframes aurora {
+    0%, 100% { transform: rotate(0deg)   scale(1);    }
+    50%      { transform: rotate(20deg)  scale(1.10); }
+  }
+  /* 胶片颗粒:压掉大面积渐变的色带(banding),近看有质感、远看仍是干净的渐变 */
+  .grain {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+    opacity: .055;
+  }
+  /* 顶部一道天光 + 四周暗角:压住画面四角,视觉重心自然落到中间三栏 */
+  .ambient::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1000px 320px at 50% -8%, rgba(255, 255, 255, .62), transparent 72%),
+      radial-gradient(140% 108% at 50% 48%, transparent 56%, rgba(15, 23, 42, .075) 100%);
+  }
+  /* ===== 用户自定义背景 =====
+     放在 .ambient 的最底层(第一个子元素),极光与光斑仍叠在它上面;
+     但照片上再叠彩色光斑会糊成一片,所以开启时把它们压暗(见下面 data-bg 段)。 */
+  .user-bg {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background-image: var(--user-bg, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(.94);
+  }
+  :root[data-bg="on"] .user-bg { display: block; }
+  /* 一层柔和遮罩:保证玻璃面板上的文字在任意照片上都还读得清 */
+  .user-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(255, 255, 255, .38) 0%,
+      rgba(255, 255, 255, .24) 42%,
+      rgba(255, 255, 255, .46) 100%);
+  }
+  [data-theme="dark"] .user-bg::after {
+    background: linear-gradient(180deg,
+      rgba(8, 11, 20, .54) 0%,
+      rgba(8, 11, 20, .42) 42%,
+      rgba(8, 11, 20, .64) 100%);
+  }
+  /* 有自定义背景时压掉光斑与极光 —— 它们本来是为渐变底设计的 */
+  :root[data-bg="on"] .orb { opacity: .16; }
+  :root[data-bg="on"] .aurora { opacity: .10; }
+
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(72px);
+    will-change: transform;
+  }
+  /* 四颗光斑与 body 四角同色系,只是更饱和 —— 玻璃折射时能析出明确的颜色 */
+  .orb-1 {
+    width: 490px; height: 490px;
+    background: var(--primary-tint);
+    top: -120px; left: -90px;
+    opacity: .56;
+    animation: drift1 28s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 430px; height: 430px;
+    background: #38bdf8;
+    bottom: -140px; right: -80px;
+    opacity: .48;
+    animation: drift2 34s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 380px; height: 380px;
+    background: #e879f9;
+    top: 40%; left: 44%;
+    opacity: .38;
+    animation: drift3 40s ease-in-out infinite;
+  }
+  .orb-4 {
+    width: 320px; height: 320px;
+    background: #34d399;
+    top: 10%; right: 16%;
+    opacity: .34;
+    animation: drift2 30s ease-in-out infinite reverse;
+  }
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(70px, 55px) scale(1.12); }
+  }
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(-65px, -50px) scale(1.08); }
+  }
+  @keyframes drift3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(-55px, 60px) scale(1.15); }
+  }
+
+  /* 玻璃需要隔离层叠上下文,避免内阴影互相污染 */
+  .glass { isolation: isolate; }
+
+  /* ===== 底部导航条(液态玻璃)=====
+     只在窄屏出现:宽屏三栏并排,一屏能看全,不需要它。
+     造型参考 iOS / HarmonyOS 的底部标签栏:半透明磨砂 + 细高光边 +
+     滑动药丸指示器 + 安全区留白。 */
+  .tabbar { display: none; }
+
+  /* 暗色主题:底部导航也要跟着暗下来,否则一条亮条压在暗页面上很跳 */
+  [data-theme="dark"] .tabbar {
+    background: linear-gradient(180deg, rgba(24, 33, 52, .62), rgba(15, 22, 38, .86));
+    border-top-color: rgba(255, 255, 255, .10);
+    box-shadow:
+      0 -8px 28px rgba(0, 0, 0, .34),
+      inset 0 1px 1px rgba(255, 255, 255, .08);
+  }
+  [data-theme="dark"] .tab-indicator {
+    background: rgba(var(--primary-rgb), .26);
+    border-color: rgba(255, 255, 255, .14);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .10);
+  }
+  [data-theme="dark"] .tab-dot { box-shadow: 0 0 0 2px rgba(15, 22, 38, .94); }
+  [data-theme="dark"] .tab-item.is-active { color: var(--primary-tint); }
+
+  /* SVG 液态扭曲滤镜挂载点 */
+  .liquid-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* ===== Layout ===== */
+  .app {
+    display: grid;
+    /* 单列网格。用 minmax(0, 1fr) 而不是默认的 auto:
+       auto 轨道的下限是子项的 min-content,而 header 的 min-content 约 382px
+       (logo + 标题 + 学科胶囊 + 两个图标按钮),会把整个网格撑到 382px,
+       于是 360/375px 的手机上整页横向溢出 —— 用户表现为"要缩小才看得全"。
+       写成 minmax(0, 1fr) 后列宽只跟容器走,子项自己负责收窄。 */
+    grid-template-columns: minmax(0, 1fr);
+    /* 第三行留给移动端的底部导航条;它在宽屏是 display:none,那一行高度为 0 */
+    grid-template-rows: var(--header-total) 1fr auto;
+    /* 先写 100vh 兜底,再写 100dvh 覆盖 —— 手机上 100vh 含地址栏高度,
+       会导致页面比可视区高,底部被裁掉、必须下滑或缩放 */
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    padding-top: var(--safe-t);   /* 刘海 / 状态栏 */
+    box-sizing: border-box;
+    background: linear-gradient(135deg, rgba(255,255,255,.56), rgba(255,255,255,.32));
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border-bottom: 1px solid rgba(255, 255, 255, .66);
+    box-shadow:
+      0 4px 22px rgba(15, 23, 42, .06),
+      inset 0 1px 1px rgba(255, 255, 255, .88);
+    z-index: 10;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    position: relative;
+    isolation: isolate;
+    width: 36px; height: 36px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: calc(15px * var(--font-scale, 1));
+    background: linear-gradient(135deg, rgba(var(--primary-rgb),.90) 0%, rgba(var(--primary-2-rgb),.86) 100%);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(255, 255, 255, .55);
+    box-shadow:
+      0 6px 18px rgba(var(--primary-rgb), .30),
+      inset 0 1.5px 1px rgba(255, 255, 255, .85),
+      inset 0 -1px 1px rgba(255, 255, 255, .28),
+      inset 0 0 16px rgba(255, 255, 255, .26);
+    transition: all .3s cubic-bezier(.4, 0, .2, 1);
+  }
+  /* 液态扭曲外壳 */
+  .logo::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(199, 210, 254, .60), rgba(221, 214, 254, .48));
+    filter: url(#liquid-edge);
+    z-index: -1;
+    opacity: .92;
+    pointer-events: none;
+  }
+  .logo:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow:
+      0 10px 26px rgba(var(--primary-rgb), .40),
+      inset 0 1.5px 1px rgba(255, 255, 255, .95),
+      inset 0 0 22px rgba(255, 255, 255, .40);
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1.25; }
+  .brand-title {
+    font-size: calc(15px * var(--font-scale, 1));
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
+  }
+  .brand-sub {
+    font-size: calc(11px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+    font-weight: var(--fw-medium);
+    letter-spacing: .12px;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  /* ===== 学科选择器:自定义玻璃下拉(原生 select 的弹出面板无法跟随主题) ===== */
+  .subject-picker { position: relative; }
+
+  /* 每个学科一个强调色,挂 data-accent 上,--accent 会向下继承给徽章与勾选图标。
+     选色原则:色相尽量错开,同色系只在明度上区分,保证 15 个学科一眼可辨。 */
+  [data-accent="math"]     { --accent: #6366f1; --accent-2: #818cf8; }  /* 靛蓝 · 数学 */
+  [data-accent="physics"]  { --accent: #3b82f6; --accent-2: #60a5fa; }  /* 湛蓝 · 物理 */
+  [data-accent="chem"]     { --accent: #10b981; --accent-2: #34d399; }  /* 翠绿 · 化学 */
+  [data-accent="chinese"]  { --accent: #f43f5e; --accent-2: #fb7185; }  /* 玫红 · 语文 */
+  [data-accent="english"]  { --accent: #f59e0b; --accent-2: #fbbf24; }  /* 琥珀 · 英语 */
+  [data-accent="bio"]      { --accent: #14b8a6; --accent-2: #2dd4bf; }  /* 青碧 · 生物 */
+  [data-accent="code"]     { --accent: #8b5cf6; --accent-2: #a78bfa; }  /* 紫罗兰 · 编程 */
+  [data-accent="science"]  { --accent: #06b6d4; --accent-2: #22d3ee; }  /* 青蓝 · 科学 */
+  [data-accent="history"]  { --accent: #b45309; --accent-2: #f59e0b; }  /* 赭棕 · 历史 */
+  [data-accent="geo"]      { --accent: #0ea5e9; --accent-2: #38bdf8; }  /* 天蓝 · 地理 */
+  [data-accent="politics"] { --accent: #db2777; --accent-2: #f472b6; }  /* 桃红 · 政治/道法 */
+  [data-accent="it"]       { --accent: #65a30d; --accent-2: #a3e635; }  /* 橄榄 · 信息技术 */
+  [data-accent="ai"]       { --accent: #d946ef; --accent-2: #e879f9; }  /* 品紫 · 人工智能 */
+  [data-accent="art"]      { --accent: #f97316; --accent-2: #fdba74; }  /* 暖橙 · 艺术素养 */
+  [data-accent="web"]      { --accent: #16a34a; --accent-2: #4ade80; }  /* 草绿 · 前端/后端开发 */
+  [data-accent="db"]       { --accent: #ca8a04; --accent-2: #facc15; }  /* 金黄 · 数据库 */
+  [data-accent="system"]   { --accent: #0f766e; --accent-2: #2dd4bf; }  /* 深青 · 系统与网络 */
+  [data-accent="cs"]       { --accent: #0d9488; --accent-2: #5eead4; }  /* 青碧 · 计算机理论 */
+  [data-accent="business"] { --accent: #1e40af; --accent-2: #60a5fa; }  /* 深蓝 · 经管 */
+  [data-accent="psych"]    { --accent: #7e22ce; --accent-2: #c084fc; }  /* 深紫 · 心理学 */
+  [data-accent="medical"]  { --accent: #dc2626; --accent-2: #f87171; }  /* 正红 · 医学 */
+
+  .subject-trigger {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px 6px 7px;
+    border-radius: 999px;
+    background: var(--glass-tint);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-edge);
+    color: var(--primary);
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    letter-spacing: .1px;
+    cursor: pointer;
+    box-shadow: var(--glass-refract);
+    transition: border-color var(--dur) var(--ease-out),
+                transform var(--dur) var(--ease-spring),
+                box-shadow var(--dur) var(--ease-out);
+  }
+  .subject-trigger:hover {
+    border-color: rgba(255, 255, 255, .98);
+    box-shadow: var(--glass-refract-hover);
+    transform: translateY(-2px);
+  }
+  .subject-trigger:active { transform: translateY(0) scale(.97); }
+
+  /* 学科首字徽章:跟随所选学科的强调色 */
+  .subject-badge {
+    width: 22px; height: 22px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(11px * var(--font-scale, 1)); font-weight: var(--fw-bold);
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent, var(--primary)), var(--accent-2, var(--primary-2)));
+    box-shadow:
+      0 2px 6px rgba(15, 23, 42, .16),
+      inset 0 1px 1px rgba(255, 255, 255, .55),
+      inset 0 -1px 1px rgba(255, 255, 255, .18);
+    transition: background var(--dur-slow) var(--ease-out);
+  }
+  /* 语言类学科用两个字母更清楚(Py / JS / C#),单独放宽一点 */
+  .subject-badge.wide {
+    width: 30px;
+    font-size: calc(10px * var(--font-scale, 1));
+    letter-spacing: -.2px;
+  }
+  .subject-label { white-space: nowrap; }
+  .subject-chevron {
+    color: var(--primary);
+    opacity: .8;
+    transition: transform var(--dur) var(--ease-spring), opacity var(--dur) var(--ease-out);
+  }
+  .subject-picker.open .subject-chevron { transform: rotate(180deg); opacity: 1; }
+
+  /* 弹出面板:磨砂玻璃 —— 提高底色不透明度 + 加强模糊,让菜单"沉"下来,
+     文字不再和背后的页面内容叠在一起(太通透会显得晃眼、可读性差) */
+  .subject-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 244px;
+    padding: 6px;
+    border-radius: var(--radius);
+    background: linear-gradient(160deg, rgba(255,255,255,.90), rgba(248,250,252,.82));
+    backdrop-filter: blur(36px) saturate(170%) brightness(1.02);
+    -webkit-backdrop-filter: blur(36px) saturate(170%) brightness(1.02);
+    border: 1px solid rgba(255, 255, 255, .88);
+    box-shadow: var(--card-shadow);
+    z-index: 50;
+    opacity: 0;
+    transform: translateY(-10px) scale(.96);
+    transform-origin: top right;
+    pointer-events: none;
+    /* visibility 延迟到淡出结束,避免关闭状态下选项仍能被 Tab 聚焦 */
+    visibility: hidden;
+    transition: opacity var(--dur-fast) var(--ease-out),
+                transform var(--dur) var(--ease-spring),
+                visibility 0s linear var(--dur);
+  }
+  .subject-picker.open .subject-menu {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    visibility: visible;
+    transition: opacity var(--dur-fast) var(--ease-out),
+                transform var(--dur) var(--ease-spring),
+                visibility 0s linear 0s;
+  }
+  .subject-menu-label {
+    padding: 7px 10px 6px;
+    font-size: calc(10px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .subject-divider {
+    height: 1px;
+    margin: 4px 6px 6px;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, .34), transparent);
+  }
+  .subject-option {
+    width: 100%;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: var(--fw-medium);
+    color: var(--text-secondary);
+    text-align: left;
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out),
+                padding var(--dur) var(--ease-spring);
+  }
+  .subject-option:hover,
+  .subject-option:focus-visible {
+    background: linear-gradient(135deg, rgba(255,255,255,.76), rgba(238,242,255,.52));
+    border-color: rgba(255, 255, 255, .96);
+    color: var(--text);
+    /* 用左右 padding 互换实现"右移 3px":总宽不变所以不会撑出滚动区域,
+       比 translateX 更适合放在 overflow 容器里 */
+    padding-left: 13px;
+    padding-right: 7px;
+  }
+  .subject-option.is-selected {
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(238,242,255,.90), rgba(245,243,255,.62));
+    border-color: rgba(199, 210, 254, .90);
+    font-weight: var(--fw-semibold);
+  }
+  .subject-option .check {
+    margin-left: auto;
+    color: var(--accent, var(--primary));
+    opacity: 0;
+    transform: scale(.6);
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring);
+  }
+  .subject-option.is-selected .check { opacity: 1; transform: scale(1); }
+
+  /* 搜索框 + 分组滚动列表 */
+  .subject-menu-head { padding: 7px 6px 5px; }
+  .subject-search {
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, .30);
+    background: rgba(255, 255, 255, .58);
+    color: var(--text);
+    font-family: inherit;
+    font-size: calc(12px * var(--font-scale, 1));
+    line-height: 1.4;
+    outline: none;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .subject-search::placeholder { color: var(--text-tertiary); }
+  .subject-search:focus {
+    border-color: rgba(var(--primary-rgb), .58);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .16);
+  }
+  /* 六十多个学科一次肯定装不下,列表区单独滚动;overscroll 拦截避免带动整页 */
+  .subject-list {
+    max-height: min(64vh, 520px);
+    /* 只允许纵向滚动。注意:只写 overflow-y:auto 时,overflow-x 的计算值会
+       被规范提升为 auto,而选项 hover 的位移 / 果冻动效的 translate 都会撑大
+       滚动区域,于是底部冒出一条横向滚动条 —— 必须显式 hidden 掉。 */
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+  .subject-list::-webkit-scrollbar { width: 6px; }
+  .subject-list::-webkit-scrollbar-track { background: transparent; }
+  .subject-list::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, .40);
+    border-radius: 999px;
+  }
+  .subject-list::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, .62); }
+  /* 分组标题吸顶,滚动时始终知道自己在哪个学段 */
+  .subject-group-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 8px 10px 5px;
+    font-size: calc(10px * var(--font-scale, 1));
+    font-weight: var(--fw-bold);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    background: linear-gradient(180deg, rgba(250, 250, 252, .98) 60%, rgba(250, 250, 252, 0));
+  }
+  .subject-empty {
+    padding: 20px 10px;
+    text-align: center;
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+  }
+
+  .icon-btn {
+    position: relative;
+    isolation: isolate;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-edge);
+    background: var(--glass-tint);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glass-refract);
+    transition: all .25s cubic-bezier(.4, 0, .2, 1);
+  }
+  /* 液态扭曲外壳 */
+  .icon-btn::before {
+    content: '';
+    position: absolute;
+    inset: -2.5px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255,255,255,.44), rgba(226,232,240,.32));
+    filter: url(#liquid-edge);
+    z-index: -1;
+    opacity: .88;
+    pointer-events: none;
+  }
+  .icon-btn:hover {
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: var(--glass-refract-hover);
+  }
+  .icon-btn:active { transform: translateY(0) scale(.95); }
+
+  /* Main grid
+     列宽由 JS 写入 --col-1 / --col-3(左右两栏),中间栏用 1fr 吃掉剩余空间。
+     这样拖拽时只需改两个变量,不用重排整张网格。 */
+  .main {
+    display: grid;
+    grid-template-columns: var(--col-1, 300px) 1fr var(--col-3, 400px);
+    gap: var(--gap);
+    padding: var(--pad-page);
+    height: calc(100vh - var(--header-h));
+    height: calc(100dvh - var(--header-total));
+    overflow: hidden;
+    position: relative;
+  }
+  /* 拖拽过程中关闭过渡与位移动画,避免跟手迟滞 */
+  .main.is-resizing { cursor: col-resize; user-select: none; }
+  .main.is-resizing .panel { transition: none; }
+  .main.is-resizing .panel:hover { box-shadow: var(--card-shadow); }
+
+  /* ===== 栏间拖拽手柄 =====
+     手柄以负外边距"骑"在网格间隙中央,不额外占位;命中区做到 14px 宽,
+     视觉上只是一条细线,但很好抓。 */
+  .resizer {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 14px;
+    margin: 0 -7px;
+    z-index: 6;
+    cursor: col-resize;
+    display: flex; align-items: center; justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    touch-action: none;
+  }
+  /* 视觉把手:细长胶囊,平时几乎隐形,hover / 拖拽时浮现 */
+  .resizer::before {
+    content: '';
+    width: 4px;
+    height: 46px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(148, 163, 184, .38), rgba(var(--primary-rgb), .58), rgba(148, 163, 184, .38));
+    opacity: 0;
+    transform: scaleY(.72);
+    transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring);
+  }
+  .resizer:hover::before,
+  .resizer:focus-visible::before,
+  .main.is-resizing .resizer::before {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  /* 命中区提示:细长的浅色背景 */
+  .resizer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: transparent;
+    transition: background var(--dur) var(--ease-out);
+  }
+  .resizer:hover::after { background: rgba(var(--primary-rgb), .07); }
+  .main.is-resizing .resizer.active::after { background: rgba(var(--primary-rgb), .12); }
+  .resizer:focus-visible { outline: none; }
+  .resizer:focus-visible::before { opacity: 1; box-shadow: var(--ring-focus); }
+
+  /* Panel base */
+  .panel {
+    background: linear-gradient(160deg, rgba(255,255,255,.60), rgba(255,255,255,.42));
+    backdrop-filter: blur(26px) saturate(175%);
+    -webkit-backdrop-filter: blur(26px) saturate(175%);
+    border: 1px solid rgba(255, 255, 255, .72);
+    border-radius: var(--radius-lg);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: box-shadow var(--dur-slow) var(--ease-out),
+                transform var(--dur-slow) var(--ease-out);
+    min-height: 0;
+  }
+  .panel:hover { box-shadow: var(--card-shadow-hover); }
+  .panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, .60);
+    background: linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.16));
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    letter-spacing: .1px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .panel-header .left { display: flex; align-items: center; gap: 8px; }
+  .panel-header .count {
+    font-size: calc(11px * var(--font-scale, 1));
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(238,242,255,.86), rgba(224,231,255,.60));
+    backdrop-filter: var(--glass-blur-soft);
+    -webkit-backdrop-filter: var(--glass-blur-soft);
+    border: 1px solid rgba(255, 255, 255, .72);
+    color: var(--primary);
+    font-weight: 600;
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, .90),
+      0 1px 3px rgba(15, 23, 42, .05);
+  }
+  /* 底部横条同类防护:纵向滚动容器必须显式关掉横向,否则卡片 hover 位移、
+     果冻动效的 translate、入场/删除动画都会把内容推出 1~20px,撑出一条横向滚动条 */
+  .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: var(--sp-4) 20px; min-height: 0; }
+

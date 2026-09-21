@@ -1,0 +1,212 @@
+/* ▼ 自动生成,请勿手改本文件头 ▼
+   css/06-responsive.css  —— 窄屏 / 竖屏:一次一栏 + 底部导航
+
+   本文件由 scripts/split.mjs 从 public/index.html 切出。
+   ⚠️ 加载顺序在 index.html 里固定,不要调整 ——
+      CSS 级联与 JS 执行都吃顺序,换了位置就会出问题。
+   ===== 文件头结束(以下为原样切出的内容)=====
+  /* ===== 窄屏 / 竖屏:改为"一次一栏 + 底部导航" =====
+     早期做法是把三栏纵向堆成一个 1000px 高的长页面,手机上必须不停下滑,
+     而且面板被压扁、输入框被顶出屏幕。现在改成底部标签栏切换,
+     每个栏独占一屏高度,栏内各自滚动 —— 不再需要下滑或缩小页面。 */
+  @media (max-width: 860px), (orientation: portrait) and (max-width: 1024px) {
+    .tabbar {
+      display: flex;
+      position: relative;
+      align-items: stretch;
+      gap: 4px;
+      padding: 6px 10px calc(6px + var(--safe-b));
+      background: linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,.74));
+      backdrop-filter: blur(30px) saturate(190%);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
+      border-top: 1px solid rgba(255, 255, 255, .82);
+      box-shadow:
+        0 -8px 28px rgba(15, 23, 42, .07),
+        inset 0 1px 1px rgba(255, 255, 255, .92);
+      z-index: 20;
+    }
+    /* iPhone 底部横条 / 安卓手势条以上留白,避免按钮被系统手势区盖住 */
+    .tabbar::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: var(--safe-b);
+      pointer-events: none;
+    }
+    /* 滑动药丸:三个标签等宽,位移用自身宽度算,不依赖 JS 测量 */
+    .tab-indicator {
+      position: absolute;
+      top: 6px;
+      bottom: calc(6px + var(--safe-b));
+      left: 10px;
+      width: calc((100% - 20px - 8px) / 3);
+      border-radius: 16px;
+      background: rgba(var(--primary-rgb), .13);
+      border: 1px solid rgba(255, 255, 255, .74);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, .90);
+      pointer-events: none;
+      transition: transform .4s var(--ease-spring);
+    }
+    .tabbar[data-active="result"] .tab-indicator { transform: translateX(calc(100% + 4px)); }
+    .tabbar[data-active="chat"]   .tab-indicator { transform: translateX(calc(200% + 8px)); }
+
+    .tab-item {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px;
+      padding: 7px 2px 5px;
+      border: 0; background: none;
+      cursor: pointer;
+      border-radius: 16px;
+      color: var(--text-tertiary);
+      font-family: inherit;
+      font-size: calc(11px * var(--font-scale, 1));
+      font-weight: var(--fw-semibold);
+      letter-spacing: .2px;
+      /* 双击不缩放 + 去掉移动端的半透明高亮块 */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: color .22s var(--ease-out), transform .22s var(--ease-out);
+      z-index: 1;
+    }
+    .tab-item svg { width: 21px; height: 21px; flex-shrink: 0; }
+    .tab-item:active { transform: scale(.93); }
+    .tab-item.is-active { color: var(--primary); }
+    /* 未读小红点:解析完成 / 回答就绪时提示切过去看看 */
+    .tab-dot {
+      position: absolute;
+      top: 5px;
+      right: 50%;
+      margin-right: -20px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--danger, #ef4444);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .92);
+      opacity: 0;
+      transform: scale(.4);
+      transition: opacity .2s, transform .2s var(--ease-spring);
+    }
+    .tab-item.has-dot .tab-dot { opacity: 1; transform: scale(1); }
+    /* 数字角标(上传了几份素材) */
+    .tab-count {
+      position: absolute;
+      top: 3px;
+      right: 50%;
+      margin-right: -24px;
+      min-width: 16px; height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      font-size: calc(10px * var(--font-scale, 1));
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(var(--primary-rgb), .40);
+      display: none;
+    }
+    .tab-item.has-count .tab-count { display: block; }
+
+    /* --- 关键:三栏改成"只显示当前这一栏",每栏独占剩余高度 --- */
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      gap: 0;
+      padding: 10px 10px 8px;
+      /* 高度交给 grid 的 1fr,不再写死,否则会覆盖掉导航条占用的空间 */
+      height: auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .main > .panel { display: none; }
+    .main > .panel.is-active { display: flex; }
+    .panel,
+    .chat-panel { max-height: none; min-height: 0; }
+    .upload-zone { padding: 22px 14px; }
+    /* 竖屏下拖拽分栏没有意义,隐藏分隔条 */
+    .resizer { display: none !important; }
+
+    /* iOS 的自动放大陷阱:输入框字号小于 16px 时,聚焦会把整页放大,
+       用户得手动缩回去 —— 这也是"手机上显示不完整"的常见原因。
+       这里统一抬到 16px(视觉上几乎无差别)。 */
+    .chat-input textarea,
+    .subject-search,
+    input,
+    textarea,
+    select { font-size: 16px; }
+    .chat-input textarea { max-height: 96px; }
+    /* 键盘弹起时视口会变矮,避免最后一屏被挡住 */
+    .chat-input-wrap { padding: 10px 12px 12px; }
+
+    /* --- 顶栏收缩:窄屏上把 header 压到 360px 以内 ---
+       它是撑宽整页的元凶(见 .app 上的注释),这里逐个"允许被压":
+       文字块可省略号截断、学科胶囊封顶、间距收紧。 */
+    .header { padding-left: 12px; padding-right: 12px; gap: 8px; }
+    .header-left { flex: 1 1 auto; min-width: 0; gap: 9px; }
+    .brand { min-width: 0; }
+    .brand-title,
+    .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-right { flex: 0 1 auto; min-width: 0; gap: 6px; }
+    /* 学科名可能很长(概率论与数理统计 · 大学),给个上限并省略 */
+    .subject-trigger { max-width: 46vw; min-width: 0; }
+    .subject-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .icon-btn { width: 34px; height: 34px; }
+  }
+
+  /* 更窄的手机(≤430px):副标题是装饰性的,让位给真正有用的内容 */
+  @media (max-width: 430px) {
+    .brand-sub { display: none; }
+    .logo { width: 32px; height: 32px; border-radius: 12px; }
+    .subject-trigger { max-width: 42vw; }
+  }
+
+  /* 超窄屏:再压一点留白,但保证每栏的可用高度 */
+  @media (max-width: 560px) {
+    .main { padding: 8px 8px 6px; }
+    .panel-body { padding: 14px; }
+    .chat-messages { padding: 14px; }
+    .panel-header { padding: 12px 14px; }
+    .action-bar { padding: 10px 12px; }
+    /* 操作栏在手机上有 4 个按钮,横排很吃紧:
+       ① 收紧间距与内边距 ② 藏掉 emoji(纯装饰,每个能省 20px 左右)
+       这样 390px 下一行放得下;万一字号调得很大,靠 .action-bar 的
+       flex-wrap 换到第二行,也不会再逐字竖排。 */
+    .action-bar { gap: 7px; }
+    .action-bar .btn { padding: 10px 10px; }
+    .action-bar .btn-i { display: none; }
+    .suggestions { padding: 6px 10px 8px; gap: 5px; }
+    .suggestion-chip { padding: 7px 10px; }
+    .header { padding-left: 14px; padding-right: 14px; }
+  }
+
+  /* 360px 这类窄机(仍然很常见)差几像素放不下 4 个按钮,会折成两行。
+     注意操作栏里还有一个 .spacer,它也是 flex 项 ——
+     间距是 4 个而不是 3 个,算宽度时别漏了它。
+     再收一点内边距就能回到一行。 */
+  @media (max-width: 400px) {
+    .action-bar { gap: 6px; }
+    .action-bar .btn { padding: 10px 8px; }
+  }
+
+  /* 横屏但高度很矮(手机横放):同样一次一栏 */
+  @media (orientation: landscape) and (max-height: 520px) {
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      padding: 6px;
+      height: auto;
+      overflow: hidden;
+    }
+    .main > .panel { display: none; }
+    .main > .panel.is-active { display: flex; }
+    .panel, .chat-panel { max-height: none; min-height: 0; }
+    .tabbar { padding-top: 3px; padding-bottom: calc(3px + var(--safe-b)); }
+    .tab-indicator { top: 3px; bottom: calc(3px + var(--safe-b)); }
+    .tab-item { flex-direction: row; gap: 6px; padding: 5px 2px; }
+    .tab-item svg { width: 18px; height: 18px; }
+    .upload-tips { display: none; }
+    .resizer { display: none !important; }
+  }
+
