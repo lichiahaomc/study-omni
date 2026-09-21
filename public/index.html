@@ -2566,7 +2566,12 @@
   /* ===== 图片裁剪(框选题目) =====
      遮罩用「选框自带超大 box-shadow + 舞台 overflow:hidden」实现 ——
      比铺四块 div 省事,而且移动/缩放时不用同步四个遮罩块的位置。 */
-  .modal-wide { width: min(860px, 100%); }
+  .modal-wide { width: min(880px, 100%); }
+  /* ⚠️ 必须显式关掉横向滚动。.modal-body 是 overflow-y:auto,
+     单轴非 visible 时另一轴会被提升成 auto —— 只要内容宽哪怕多出 1px
+     (手柄在贴边时会伸出图片 12.5px),底部就会冒出一条横向滚动条。
+     宽度换算已按 crop-frame 的内边距算过,这里是兜底。 */
+  #cropModal .modal-body { overflow-x: hidden; }
   .crop-head-left { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
   .crop-step {
     font-size: calc(11.5px * var(--font-scale, 1));
@@ -5415,22 +5420,29 @@ function cropRectOf(sel, dispW, natW, natH) {
     paint();
   }
 
+  /* 宽度换算链(一处算清,别在几处各写一个魔法数):
+       .modal-layer padding 20 | .modal 边框 1 | .modal-body padding 17
+       | .crop-frame padding 14 → 图片
+     漏算 crop-frame 那 14px 的话,内容会比弹窗宽,底下就会冒横向滚动条(踩过)。 */
+  const MODAL_MAX = 880;          // 与 CSS 的 .modal-wide 保持一致
+  const CHROME = (1 + 17 + 14) * 2;   // 单侧 1+17+14=32,两侧共 64
+
   /* 把图片按可用空间等比铺进舞台。小图允许放大一点(最多 2 倍),
      否则在手机上一张 200px 的图根本没法框。 */
   function layout() {
-    const pad = 44;
-    const maxW = Math.min(820, window.innerWidth - pad * 2);
+    const avail = Math.min(MODAL_MAX, window.innerWidth - 40);   // 40 = layer 左右 padding
+    const maxW = Math.max(160, Math.min(820, avail - CHROME));
     const maxH = Math.max(180, window.innerHeight - 300);
     const k = Math.min(maxW / natW, maxH / natH, 2);
     dispW = Math.max(1, Math.round(natW * k));
     dispH = Math.max(1, Math.round(natH * k));
-    // 尺寸给到 viewport(stage 靠 padding 自动撑大)
+    // 尺寸给到 viewport(stage 靠 fit-content 自动跟上)
     viewport.style.width = dispW + 'px';
     viewport.style.height = dispH + 'px';
     // 弹窗宽度跟着图片走 —— 竖长的题目页配一个宽弹窗,两侧会空出一大片灰
     const modalEl = document.getElementById('cropModal');
     if (modalEl) {
-      const want = Math.max(380, Math.min(860, dispW + 38));   // 38 = 正文左右内边距 + 边框
+      const want = Math.max(380, Math.min(MODAL_MAX, dispW + CHROME));
       modalEl.style.width = 'min(' + want + 'px, 100%)';
     }
   }

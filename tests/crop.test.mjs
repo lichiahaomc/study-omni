@@ -175,6 +175,52 @@ ok('手柄不在 crop-box 里面(是兄弟层)', (function () {
 ok('交互以 viewport 为坐标原点', /viewport\.getBoundingClientRect\(\)/.test(HTML));
 ok('图片尺寸设到 viewport 上', /viewport\.style\.width = dispW/.test(HTML));
 
+/* ⚠️ 踩过的坑:弹窗宽度按 `图片宽 + 38` 算,漏了 .crop-frame 的 14px 内边距,
+   内容比弹窗宽 26px → .modal-body 是 overflow-y:auto,另一轴被提升成 auto,
+   底部冒出一条横向滚动条(用户报的「框移到最右侧时底下出现的拖拽条」)。
+   修法是把这个换算链一处算清,这里再把手写常量与 CSS 对齐 ——
+   以后谁改了任一处的内边距,这条会立刻失败。 */
+section('弹窗宽度的换算链(别再算漏)');
+
+function padX(sel) {
+  const b = ruleOf(sel, 'padding');
+  const m = b.match(/padding:\s*([^;]+);/);
+  if (!m) return null;
+  const parts = m[1].trim().split(/\s+/).map(v => parseFloat(v));
+  return parts.length === 1 ? parts[0] : parts[1];   // 两值时第二个是左右
+}
+const layerPad = padX('.modal-layer {');
+const modalBorder = (function () {
+  const b = ruleOf('.modal {', 'border');
+  const m = b.match(/border:\s*([\d.]+)px/);
+  return m ? parseFloat(m[1]) : null;
+})();
+const bodyPad = padX('.modal-body {');
+const framePad = padX('.crop-frame {');
+
+eq('.modal-layer 左右内边距 = 20px(JS 里按 -40 估算可用宽)', layerPad, 20);
+eq('.modal-body 左右内边距 = 17px', bodyPad, 17);
+eq('.crop-frame 左右内边距 = 14px(给手柄留的余量)', framePad, 14);
+eq('.modal 边框 = 1px', modalBorder, 1);
+
+const expectChrome = (modalBorder + bodyPad + framePad) * 2;
+ok('JS 的 CHROME 常量与 CSS 三处内边距之和一致(' + expectChrome + ')',
+   new RegExp('const CHROME = \\(' + modalBorder + ' \\+ ' + bodyPad + ' \\+ ' + framePad + '\\) \\* 2')
+     .test(HTML),
+   expectChrome);
+
+ok('图片可用宽度从弹窗可用宽里减掉 CHROME',
+   /Math\.min\(820, avail - CHROME\)/.test(HTML));
+ok('弹窗宽度公式加的是同一个 CHROME(不是写死的数字)',
+   /Math\.min\(MODAL_MAX, dispW \+ CHROME\)/.test(HTML));
+ok('.modal-wide 的最大宽度与 JS 的 MODAL_MAX 一致',
+   new RegExp('\\.modal-wide \\{ width: min\\(' + (/const MODAL_MAX = (\d+)/.exec(HTML) || [])[1] + 'px, 100%\\); \\}').test(HTML),
+   (/const MODAL_MAX = (\d+)/.exec(HTML) || [])[1]);
+
+// 兜底:即便哪天真算漏了 1px,也绝不能冒出横向滚动条
+ok('裁剪弹窗的正文显式关掉横向滚动',
+   /#cropModal \.modal-body\s*\{\s*overflow-x:\s*hidden/.test(HTML));
+
 section('接入上传链路');
 
 ok('handleFiles 会先过裁剪队列', /window\.StudyCrop\.run\(list\)/.test(HTML));
