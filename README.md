@@ -37,7 +37,7 @@ tests/               离线测试,`npm test` 全跑
   providers.test.mjs 厂商表自洽性 + 模型名解析 + 端点管束源码断言
   ratelimit.test.mjs 限流与同源校验
   subjects.test.mjs  学科表一致性 + 提示词生成
-docs/                README 用图
+docs/                README 用图 / 视频脚本 / 提交清单
 ```
 
 ### 前端为什么是 19 个文件而不是 1 个
