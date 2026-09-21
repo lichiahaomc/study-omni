@@ -24,6 +24,7 @@ subject-picker-*.png
 .syntaxcheck.mjs
 
 # 助手的工作记忆与临时目录,属于本地工具状态,不是交付物
+.deck/
 .learnbuddy/
 .rltest/
 .clean/
