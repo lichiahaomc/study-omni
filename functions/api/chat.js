@@ -8,6 +8,7 @@
 import {
   json, clamp, resolveTier, resolveModel, resolveMaxTokens,
   callUpstream, streamToClient, describeConfig, PROVIDER,
+  resolveUserKey, resolveUserEndpoint,
 } from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin, currentLimits } from '../_lib/ratelimit.js';
@@ -32,11 +33,20 @@ export async function onRequestPost(context) {
     return json({ error: '请求体不是合法 JSON' }, 400);
   }
 
-  const apiKey = env[PROVIDER.keyEnv];
+  /* 用户自带的密钥 / API 地址(设置里填的,走请求头)。两者都必须过校验;
+     不合法就当作没填,静默回落到服务端配置 —— 不报错,
+     否则这个接口会变成"帮你探测地址合不合法"的工具。
+
+     ⚠️ 密钥只在这里被读取和使用:不写日志、不回传、不进任何响应。 */
+  const userKey = resolveUserKey(request.headers.get('X-Studyomni-Key'));
+  const userEndpoint = resolveUserEndpoint(request.headers.get('X-Studyomni-Base'));
+
+  const apiKey = userKey || env[PROVIDER.keyEnv];
   if (!apiKey) {
     return json({
-      error: `服务端未配置 ${PROVIDER.keyEnv}`,
-      hint: '本地开发请写入 .dev.vars 并重跑 wrangler pages dev;线上请在 Cloudflare 控制台配置 Secret',
+      error: `服务端未配置 ${PROVIDER.keyEnv},也没有填自定义 API`,
+      hint: '可以点右上角齿轮 → 「自定义 API」填入你自己的密钥;'
+        + '或本地写 .dev.vars 后重跑 wrangler pages dev,线上在 Cloudflare 控制台配 Secret',
     }, 500);
   }
 
@@ -84,7 +94,12 @@ export async function onRequestPost(context) {
 
   let upstream;
   try {
-    upstream = await callUpstream({ apiKey, payload: body });
+    upstream = await callUpstream({
+      apiKey,
+      payload: body,
+      // userEndpoint 已经过 resolveUserEndpoint 白名单校验;为空则走内置常量
+      endpoint: userEndpoint || undefined,
+    });
   } catch (e) {
     return json({ error: '无法连接上游', detail: String(e) }, 502);
   }

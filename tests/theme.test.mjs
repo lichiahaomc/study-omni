@@ -403,6 +403,48 @@ ok('npm test 会先校验目录',
    /"test":\s*"node scripts\/toc\.mjs --check/.test(
      fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')));
 
+section('控件文字不许逐字换行(竖排)');
+
+// ⚠️ 按钮是 flex 容器,里面的文字是"匿名 flex 子项"。宽度不够时它不溢出,
+// 而是**逐字换行** —— 中文就竖起来了。踩过:操作栏加到 4 个按钮之后,
+// 「收藏题目」被压成一列两个字。所以带文字的控件必须显式 nowrap。
+const NOWRAP_GROUP = HTML.match(/\.btn,\s*\.btn-mini,[\s\S]{0,220}?white-space:\s*nowrap/);
+ok('带文字的控件统一设了 white-space: nowrap', !!NOWRAP_GROUP,
+   NOWRAP_GROUP ? NOWRAP_GROUP[0].slice(0, 80) : null);
+['.btn', '.btn-mini', '.ghost-btn', '.sample-btn', '.seg-item',
+ '.tab-item', '.subject-option', '.subject-trigger'].forEach(cls => {
+  ok(cls + ' 在 nowrap 清单里', !!NOWRAP_GROUP && NOWRAP_GROUP[0].includes(cls));
+});
+// 真放不下时靠外层换行,而不是把按钮压扁
+ok('.action-bar 允许换行(兜底)',
+   /\.action-bar \{[\s\S]{0,160}?flex-wrap:\s*wrap/.test(HTML));
+// 手机上藏掉 emoji,给 4 个按钮腾出宽度
+ok('窄屏会藏掉按钮 emoji', /\.action-bar \.btn-i \{ display: none; \}/.test(HTML));
+// 收藏按钮的文字是 JS 写的,必须保留 .btn-i 包裹(改回 textContent 就又竖排了)
+ok('收藏按钮用 innerHTML 写,保留 .btn-i',
+   /btn\.innerHTML = '<span class="btn-i"/.test(HTML));
+ok('没有再用 textContent 覆盖收藏按钮',
+   !/btn\.textContent = on \?/.test(HTML));
+
+section('设置里的自定义 API');
+
+ok('输入框与按钮都在',
+   /id="apiKeyInput"/.test(HTML) && /id="apiBaseInput"/.test(HTML)
+   && /id="apiSave"/.test(HTML) && /id="apiReset"/.test(HTML));
+// ⚠️ 密钥绝不能进 Settings 的 state —— 否则「导出设置」会把密钥导出成文件
+const defaultsBlock = HTML.match(/const DEFAULTS = \{[\s\S]*?\n  \};/);
+ok('DEFAULTS 里没有 apiKey / apiBase', !!defaultsBlock
+   && !/apiKey|apiBase/.test(defaultsBlock[0]));
+ok('密钥单独存一个 localStorage 键', /studyomni-api-key/.test(HTML));
+ok('请求头带自定义密钥', /h\['X-Studyomni-Key'\] = k/.test(HTML));
+ok('请求头带自定义地址', /h\['X-Studyomni-Base'\] = b/.test(HTML));
+// 服务端没配密钥时,填了自定义密钥也要能用(否则会误判"没后端"而降级到演示模式)
+ok('探测后端时把自定义密钥算进去',
+   /info\.keyConfigured \|\| UserAPI\.active\(\)/.test(HTML));
+ok('保存与恢复默认都实现了',
+   /function save\(\)/.test(HTML) && /UserAPI\.clear\(\)/.test(HTML));
+ok('只填域名时自动补对话路径', /DEFAULT_PATH = '\/chat\/completions'/.test(HTML));
+
 section('README');
 
 const README = fs.readFileSync(path.join(process.cwd(), 'README.md'), 'utf8');

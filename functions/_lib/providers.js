@@ -8,7 +8,8 @@
  *   比赛演示要的是**真能跑通**的一条路,所以收敛成一家。
  *
  *   想接别家?照下面三件事改即可,业务层不用动:
- *     1. 加一个 endpoint 常量(必须写死在这里 —— 前端不可指定,防 SSRF)
+ *     1. 加一个 endpoint 常量(默认端点写死在这里。客户端只有 BYOK 那一条
+ *        受管束的路径能覆盖它 —— 见 resolveUserEndpoint,私网/回环一律拒绝)
  *     2. 加密钥环境变量
  *     3. 在 TIERS 里给出模型 id
  *
@@ -139,7 +140,9 @@ export function clamp(n, lo, hi, fallback = lo) {
 /**
  * 发起到上游的请求。
  * 关键约束:
- *  - endpoint 只能来自本文件的常量,前端无法指定,杜绝 SSRF
+ *  - endpoint 默认只能来自本文件的常量;客户端**唯一**能影响它的路径是
+ *    chat.js 里那个 `X-Studyomni-Base` 头,而且必须先过 resolveUserEndpoint()
+ *    的管束(见下)。没有校验过的地址绝不进来。
  *  - 密钥只在这里出现,响应永远不回传
  */
 export async function callUpstream({ apiKey, payload, endpoint = PROVIDER.endpoint }) {
@@ -151,6 +154,61 @@ export async function callUpstream({ apiKey, payload, endpoint = PROVIDER.endpoi
     },
     body: JSON.stringify(payload),
   });
+}
+
+/* ==================== 用户自带 API(BYOK) ====================
+   允许用户在设置里填自己的密钥(可选再加一个自己的 API 地址)。
+   两点设计取舍:
+
+   1. **密钥绝不进 Settings 那份 state**。设置面板有"导出设置"功能,
+      一旦密钥进了 state 就会被导出成 JSON 文件。所以它单独存两个
+      localStorage 键,和处理主题/字号的设置彻底分开。
+
+   2. **地址必须过管束**。放开"客户端可指定端点"这件事本身是有风险的
+      (Worker 会变成 SSRF 跳板:拿它去打内网、打云元数据地址)。
+      所以这里只放行 https + 公共域名,私网/回环/链路本地/云元数据一律拒绝。
+      不合法就当作没填,静默回落到服务端配置 —— 不报错,免得变成探测工具。 */
+
+// 这些主机名本身就是"指向本机"的写法
+const LOCAL_HOST = /^(localhost|.*\.localhost|.*\.local|.*\.internal|.*\.home\.arpa)$/i;
+
+function isPrivateIPv4(h) {
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const a = +m[1], b = +m[2];
+  if (a === 0 || a === 10 || a === 127) return true;          // 本机 / 私网 A
+  if (a === 169 && b === 254) return true;                    // 链路本地(云元数据就在这)
+  if (a === 172 && b >= 16 && b <= 31) return true;           // 私网 B
+  if (a === 192 && b === 168) return true;                    // 私网 C
+  if (a === 100 && b >= 64 && b <= 127) return true;          // 运营商级 NAT
+  if (a >= 224) return true;                                  // 组播 / 保留段
+  return false;
+}
+
+/** 校验用户填的 API 地址。通过返回规范化后的 URL 串,不通过返回 ''。 */
+export function resolveUserEndpoint(raw) {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 200) return '';
+  let u;
+  try { u = new URL(s); } catch { return ''; }
+  if (u.protocol !== 'https:') return '';                     // 只认 https
+  if (u.username || u.password) return '';                    // 不许带凭据
+  if (u.search || u.hash) return '';                          // 与内置端点保持一致的形态
+  const host = u.hostname.toLowerCase();
+  if (LOCAL_HOST.test(host)) return '';
+  if (host.includes('[') || host.includes(':')) return '';    // IPv6 一律拒绝:规则太容易漏
+  if (isPrivateIPv4(host)) return '';
+  return u.toString();
+}
+
+/** 校验用户填的密钥。只放行常见的密钥字符形态,避免被塞进别的东西。 */
+export function resolveUserKey(raw) {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (s.length < 8 || s.length > 200) return '';
+  if (!/^[A-Za-z0-9._\-]+$/.test(s)) return '';
+  return s;
 }
 
 /** 流式透传。no-store 必须:否则边缘可能试图缓存这个无限长的响应。

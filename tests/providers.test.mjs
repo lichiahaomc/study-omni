@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import {
   PROVIDER, TIERS, DEFAULT_TIER, VISION_MODEL, VISION_MODEL_ENV,
   resolveTier, resolveModel, resolveMaxTokens, describeConfig, REASONING_BUDGET,
+  resolveUserKey, resolveUserEndpoint,
 } from '../functions/_lib/providers.js';
 
 let pass = 0, fail = 0;
@@ -186,6 +187,75 @@ eq('自检反映模型覆盖',
    c2.tiers.find(x => x.name === DEFAULT_TIER).model, 'custom');
 eq('自检标出被哪个变量覆盖',
    c2.tiers.find(x => x.name === DEFAULT_TIER).overriddenBy, TIERS[DEFAULT_TIER].modelEnv);
+
+/* ==================== 5. 用户自带 API(BYOK) ==================== */
+section('自定义 API:密钥校验');
+
+ok('正常密钥放行', resolveUserKey('sk-abcdef1234567890') === 'sk-abcdef1234567890');
+ok('去掉首尾空白', resolveUserKey('  sk-abcdef1234567890  ') === 'sk-abcdef1234567890');
+ok('太短拒绝', resolveUserKey('sk-1') === '');
+ok('空值拒绝', resolveUserKey('') === '' && resolveUserKey(null) === '' && resolveUserKey(undefined) === '');
+ok('超长拒绝', resolveUserKey('a'.repeat(201)) === '');
+// 密钥会被塞进 Authorization 头,含空白/换行/引号的形态一律不放行 ——
+// 否则等于给了注入自定义头的能力
+ok('含空格拒绝', resolveUserKey('sk-abc def123456') === '');
+ok('含换行拒绝', resolveUserKey('sk-abc\n1234567890') === '');
+ok('含冒号/引号拒绝', resolveUserKey('sk-abc:1234567') === '' && resolveUserKey('sk-"1234567') === '');
+
+section('自定义 API:地址管束(这里被绕过 = Worker 变 SSRF 跳板)');
+
+const deny = [
+  ['http 明文', 'http://api.example.com/chat/completions'],
+  ['localhost', 'https://localhost/chat/completions'],
+  ['子域 .localhost', 'https://a.localhost/chat/completions'],
+  ['.local', 'https://box.local/chat/completions'],
+  ['.internal', 'https://meta.internal/chat/completions'],
+  ['回环 IPv4', 'https://127.0.0.1/chat/completions'],
+  ['私网 10/8', 'https://10.1.2.3/chat/completions'],
+  ['私网 192.168/16', 'https://192.168.1.1/chat/completions'],
+  ['私网 172.16/12', 'https://172.20.0.9/chat/completions'],
+  ['云元数据 169.254', 'https://169.254.169.254/latest/meta-data'],
+  ['CGNAT 100.64', 'https://100.64.0.1/chat/completions'],
+  ['保留段 240/4', 'https://240.0.0.1/chat/completions'],
+  ['IPv6 回环', 'https://[::1]/chat/completions'],
+  ['带账号密码', 'https://u:p@api.example.com/chat/completions'],
+  ['带查询串', 'https://api.example.com/c?x=1'],
+  ['带锚点', 'https://api.example.com/c#x'],
+  ['不是 URL', 'api.example.com'],
+  ['空值', ''],
+  ['超长', 'https://api.example.com/' + 'a'.repeat(200)],
+];
+deny.forEach(([why, v]) => {
+  ok('拒绝:' + why, resolveUserEndpoint(v) === '', resolveUserEndpoint(v));
+});
+
+ok('放行正常的公共 https 地址',
+   resolveUserEndpoint('https://api.deepseek.com/chat/completions')
+   === 'https://api.deepseek.com/chat/completions');
+ok('放行自建网关(带路径)',
+   resolveUserEndpoint('https://gateway.mycorp.cn/v1/chat/completions')
+   === 'https://gateway.mycorp.cn/v1/chat/completions');
+ok('放行公网 IP', resolveUserEndpoint('https://8.8.8.8/chat/completions')
+   === 'https://8.8.8.8/chat/completions');
+ok('去掉首尾空白', resolveUserEndpoint('  https://a.com/c  ') === 'https://a.com/c');
+
+section('自定义 API:接入方式');
+
+const chatSrc = sources['api/chat.js'];
+const parseSrc = sources['api/parse.js'];
+['api/chat.js', 'api/parse.js'].forEach(f => {
+  const code = stripComments(sources[f]);
+  // 只从请求头取,不从 payload —— 上面那条"不读请求体里的端点"断言仍然成立
+  ok(`${f} 从请求头读自定义密钥`, /headers\.get\(\s*'X-Studyomni-Key'\s*\)/.test(code));
+  ok(`${f} 从请求头读自定义地址`, /headers\.get\(\s*'X-Studyomni-Base'\s*\)/.test(code));
+  // 两者都必须过校验才用,不能直接把头里的值传下去
+  ok(`${f} 密钥过了 resolveUserKey`, /resolveUserKey\(/.test(code));
+  ok(`${f} 地址过了 resolveUserEndpoint`, /resolveUserEndpoint\(/.test(code));
+});
+ok('chat.js 用户没填就回落到服务端密钥', /userKey\s*\|\|\s*env\[PROVIDER\.keyEnv\]/.test(chatSrc));
+ok('parse.js 同样回落', /userKey\s*\|\|\s*env\[PROVIDER\.keyEnv\]/.test(parseSrc));
+ok('端点默认值没有被改掉',
+   /endpoint = PROVIDER\.endpoint/.test(sources['_lib/providers.js']));
 
 console.log('\n========== ' + (pass + fail) + ' 项:' + pass + ' PASS / ' + fail + ' FAIL ==========');
 process.exit(fail ? 1 : 0);

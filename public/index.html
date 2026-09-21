@@ -2,72 +2,75 @@
 <html lang="zh-CN" data-brand="green">
 <head>
 <!-- ▼ 目录 · 由 `npm run toc` 生成,请勿手改 ▼
-  目录 · 全文 7969 行,分 54 段。
+  目录 · 全文 8159 行,分 57 段。
   改动后跑 `npm run toc` 重新生成;`npm test` 会校验它与实际横幅一致。
   正文的分节横幅本来就有,只是 CSS 用 /* ===== */、JS 用 /* ======== */、
   HTML 用「等号注释」,三种写法各管各的,没有一处能把它们列全 —— 于是有了这份目录。
 
-  [样式]  77 – 3482
-       77  设计令牌:字号缩放 / 移动端尺寸 / 颜色 / 圆角
-      123  排版层级:字重 / 字距对比
-      132  多层微投影 Subtle Shadows(由近及远,4 层扩散)
-      157  间距节奏
-      166  动效曲线
-      174  液态玻璃 Liquid Glass
-      228  氛围光斑背景:为玻璃提供可折射的内容
-      283  用户自定义背景
-      367  底部导航条(液态玻璃)
-      392  Layout
-      481  学科选择器:自定义玻璃下拉(原生 select 的弹出面板无法跟随主题)
-      763  栏间拖拽手柄
-      854  Left: Upload
-     1153  Center: Result
-     1421  Right: Chat
-     1830  优雅降级:不支持 backdrop-filter 时退回接近实色,保证可读性
-     1849  暗色主题 Dark Theme
-     2336  设置抽屉
-     2516  通用弹窗(自定义主题色 / 上传背景共用)
-     2669  图片裁剪(框选题目)
-     2799  收藏夹
-     3083  紧凑密度 / 关闭动效:由 JS 在 <html> 上切 data 属性驱动
-     3113  轻量提示条
-     3165  无障碍:尊重系统的"减少动态效果"设置
-     3166  回答被长度上限截断时的尾部提示
-     3176  LaTeX 公式(KaTeX)
-     3220  已收藏状态(收藏按钮点了要看得出来)
-     3256  窄屏 / 竖屏:改为"一次一栏 + 底部导航"
-     3445  主题色调色板(默认绿色,:root 即 green)
-     3453  按钮果冻动效
+  [样式]  80 – 3542
+       80  设计令牌:字号缩放 / 移动端尺寸 / 颜色 / 圆角
+      126  排版层级:字重 / 字距对比
+      135  多层微投影 Subtle Shadows(由近及远,4 层扩散)
+      160  间距节奏
+      169  动效曲线
+      177  液态玻璃 Liquid Glass
+      231  氛围光斑背景:为玻璃提供可折射的内容
+      286  用户自定义背景
+      370  底部导航条(液态玻璃)
+      395  Layout
+      484  学科选择器:自定义玻璃下拉(原生 select 的弹出面板无法跟随主题)
+      766  栏间拖拽手柄
+      857  Left: Upload
+     1156  Center: Result
+     1374  控件里的文字一律不许逐字换行
+     1434  Right: Chat
+     1843  优雅降级:不支持 backdrop-filter 时退回接近实色,保证可读性
+     1862  暗色主题 Dark Theme
+     2349  设置抽屉
+     2460  自定义 API(BYOK):设置里的密钥 / 地址输入
+     2560  通用弹窗(自定义主题色 / 上传背景共用)
+     2713  图片裁剪(框选题目)
+     2843  收藏夹
+     3127  紧凑密度 / 关闭动效:由 JS 在 <html> 上切 data 属性驱动
+     3157  轻量提示条
+     3209  无障碍:尊重系统的"减少动态效果"设置
+     3210  回答被长度上限截断时的尾部提示
+     3220  LaTeX 公式(KaTeX)
+     3264  已收藏状态(收藏按钮点了要看得出来)
+     3300  窄屏 / 竖屏:改为"一次一栏 + 底部导航"
+     3505  主题色调色板(默认绿色,:root 即 green)
+     3513  按钮果冻动效
 
-  [预初始化脚本(首屏渲染前,避免闪一下再变)]  3485 – 3626
-     3485  主题配色算法:由「一个基色」推导整套 CSS 变量
-     3590  设置预初始化:首屏渲染前铺好主题 / 字号 / 密度 / 动效 / 栏宽
+  [预初始化脚本(首屏渲染前,避免闪一下再变)]  3545 – 3686
+     3545  主题配色算法:由「一个基色」推导整套 CSS 变量
+     3650  设置预初始化:首屏渲染前铺好主题 / 字号 / 密度 / 动效 / 栏宽
 
-  [页面结构]  3630 – 4619
-     3631  液态玻璃 SVG 滤镜:用 feTurbulence + feDisplacementMap 做边缘液态扭曲
-     3647  氛围光斑:玻璃折射的内容来源
-     3660  Header
-     4037  Main
-     4210  设置抽屉
-     4470  弹窗:自定义主题色 / 上传背景
-     4508  弹窗:上传背景
-     4542  弹窗:裁剪图片(框选题目)
-     4593  弹窗:收藏夹
+  [页面结构]  3690 – 4702
+     3691  液态玻璃 SVG 滤镜:用 feTurbulence + feDisplacementMap 做边缘液态扭曲
+     3707  氛围光斑:玻璃折射的内容来源
+     3720  Header
+     4097  Main
+     4270  设置抽屉
+     4553  弹窗:自定义主题色 / 上传背景
+     4591  弹窗:上传背景
+     4625  弹窗:裁剪图片(框选题目)
+     4676  弹窗:收藏夹
 
-  [主脚本]  4621 – 7967
-     4621  交互逻辑
-     4793  公式渲染(LaTeX)
-     5083  AI 后端接入
-     5521  素材解析
-     5658  图片裁剪(框选题目)
-     6068  中栏工具栏 & 底部操作按钮
-     6390  移动端底部导航
-     6521  Ctrl+V 粘贴上传
-     6799  设置中心
-     7252  自定义主题色 + 上传背景
-     7295  一、自定义主题色
-     7402  二、上传背景
-     7786  三栏拖拽调整宽度
+  [主脚本]  4704 – 8157
+     4704  交互逻辑
+     4876  公式渲染(LaTeX)
+     5166  AI 后端接入
+     5190  用户自带的 API(BYOK)
+     5638  素材解析
+     5775  图片裁剪(框选题目)
+     6185  中栏工具栏 & 底部操作按钮
+     6509  移动端底部导航
+     6640  Ctrl+V 粘贴上传
+     6918  设置中心
+     7442  自定义主题色 + 上传背景
+     7485  一、自定义主题色
+     7592  二、上传背景
+     7976  三栏拖拽调整宽度
 ▲ 目录结束 ▲ -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -1368,8 +1371,18 @@
     color: var(--text);
   }
 
+  /* ===== 控件里的文字一律不许逐字换行 =====
+     按钮是 flex 容器,里面的文字会变成"匿名 flex 子项"。宽度不够时它不会
+     溢出,而是**逐字换行** —— 中文就竖起来了(「收藏题目」被压成一列两个字)。
+     踩过:操作栏加了第 4 个按钮之后,4 个按钮挤在 390px 里,全部变成竖排。
+
+     一次性把所有带文字的控件钉成 nowrap;真放不下时由外层 flex-wrap 换行,
+     或由窄屏规则缩小,绝不逐字断。新增带文字的控件记得加进这个清单。 */
+  .btn, .btn-mini, .ghost-btn, .sample-btn, .seg-item,
+  .tab-item, .subject-option, .subject-trigger, .modal-title { white-space: nowrap; }
+
   .action-bar {
-    display: flex; gap: 10px;
+    display: flex; gap: 10px; flex-wrap: wrap;
     padding: 14px 20px;
     border-top: 1px solid rgba(255, 255, 255, .60);
     background: linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.18));
@@ -2443,6 +2456,37 @@
     line-height: 1.5;
   }
   .settings-label-desc b { color: var(--primary); font-weight: 700; }
+
+  /* ===== 自定义 API(BYOK):设置里的密钥 / 地址输入 ===== */
+  .api-fields { display: flex; flex-direction: column; gap: 8px; }
+  .text-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm, 12px);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .72);
+    color: var(--text);
+    font-family: inherit;
+    font-size: calc(12.5px * var(--font-scale, 1));
+    transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  }
+  .text-input::placeholder { color: var(--text-tertiary); }
+  .text-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--ring-focus);
+  }
+  [data-theme="dark"] .text-input {
+    background: rgba(148, 163, 184, .12);
+    border-color: rgba(255, 255, 255, .16);
+  }
+  .api-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .api-state {
+    font-size: calc(11.5px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    color: var(--primary);
+  }
+  .api-note { margin-top: 2px; }
   /* ---- 主题色色板 ---- */
   .swatch-group {
     display: inline-flex; align-items: center; gap: 7px;
@@ -3417,9 +3461,25 @@
     .chat-messages { padding: 14px; }
     .panel-header { padding: 12px 14px; }
     .action-bar { padding: 10px 12px; }
+    /* 操作栏在手机上有 4 个按钮,横排很吃紧:
+       ① 收紧间距与内边距 ② 藏掉 emoji(纯装饰,每个能省 20px 左右)
+       这样 390px 下一行放得下;万一字号调得很大,靠 .action-bar 的
+       flex-wrap 换到第二行,也不会再逐字竖排。 */
+    .action-bar { gap: 7px; }
+    .action-bar .btn { padding: 10px 10px; }
+    .action-bar .btn-i { display: none; }
     .suggestions { padding: 6px 10px 8px; gap: 5px; }
     .suggestion-chip { padding: 7px 10px; }
     .header { padding-left: 14px; padding-right: 14px; }
+  }
+
+  /* 360px 这类窄机(仍然很常见)差几像素放不下 4 个按钮,会折成两行。
+     注意操作栏里还有一个 .spacer,它也是 flex 项 ——
+     间距是 4 个而不是 3 个,算宽度时别漏了它。
+     再收一点内边距就能回到一行。 */
+  @media (max-width: 400px) {
+    .action-bar { gap: 6px; }
+    .action-bar .btn { padding: 10px 8px; }
   }
 
   /* 横屏但高度很矮(手机横放):同样一次一栏 */
@@ -4116,9 +4176,9 @@
       </div>
 
       <div class="action-bar">
-        <button class="btn" id="btnFavorite">📌 收藏题目</button>
-        <button class="btn" id="btnFavList">📚 收藏夹<span class="fav-badge" id="favBadge" hidden>0</span></button>
-        <button class="btn" id="btnShare">📤 分享</button>
+        <button class="btn" id="btnFavorite"><span class="btn-i" aria-hidden="true">📌</span>收藏题目</button>
+        <button class="btn" id="btnFavList"><span class="btn-i" aria-hidden="true">📚</span>收藏夹<span class="fav-badge" id="favBadge" hidden>0</span></button>
+        <button class="btn" id="btnShare"><span class="btn-i" aria-hidden="true">📤</span>分享</button>
         <span class="spacer"></span>
         <button class="btn btn-primary" id="btnAsk">
           开始答疑
@@ -4372,6 +4432,29 @@
             <input type="range" id="maxLen" class="range" min="256" max="8192" step="256" value="2048"
                    aria-label="最大回答长度" />
           </div>
+        </div>
+
+        <!-- ---------- 自定义 API ---------- -->
+        <div class="settings-row settings-row-block">
+          <div class="settings-label">
+            <span class="settings-label-main">自定义 API</span>
+            <span class="settings-label-desc" id="apiModeDesc">当前使用服务端配置的密钥</span>
+          </div>
+          <div class="api-fields">
+            <input type="password" id="apiKeyInput" class="text-input" autocomplete="off"
+                   spellcheck="false" placeholder="API Key(留空 = 用服务端默认)" aria-label="自定义 API Key" />
+            <input type="text" id="apiBaseInput" class="text-input" autocomplete="off"
+                   spellcheck="false" placeholder="API 地址(可选,留空 = 用官方)" aria-label="自定义 API 地址" />
+          </div>
+          <div class="api-actions">
+            <button type="button" class="btn-mini" id="apiSave">保存</button>
+            <button type="button" class="btn-mini btn-mini-ghost" id="apiReset">恢复默认</button>
+            <span class="api-state" id="apiState" hidden></span>
+          </div>
+          <p class="settings-label-desc api-note">
+            只存在你自己的浏览器里,<b>不会</b>随「导出设置」导出,也不会上传到服务端保存 ——
+            每次请求临时带上,用完即弃。地址只接受 https 公共域名,私网地址会被拒绝。
+          </p>
         </div>
       </section>
 
@@ -5104,6 +5187,38 @@ function getSubject() {
   return (el && el.textContent ? el.textContent : '数学 · 高中').trim();
 }
 
+/* ===== 用户自带的 API(BYOK) =====
+   设置里可以填自己的密钥和 API 地址。
+
+   ⚠️ 刻意**不放进 Settings 那份 state**:设置面板有「导出设置」,
+   密钥一旦进了 state 就会被导出成一个 JSON 文件到处传。所以它单独存两个
+   localStorage 键,和主题/字号那些设置彻底分开。
+
+   密钥每次请求通过请求头带上去,服务端用完即弃,不落库、不回传。 */
+const UserAPI = (function () {
+  const KEY_STORE = 'studyomni-api-key';
+  const BASE_STORE = 'studyomni-api-base';
+  const read = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const write = (k, v) => {
+    try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {}
+  };
+  return {
+    key: () => read(KEY_STORE),
+    base: () => read(BASE_STORE),
+    active: () => !!read(KEY_STORE),
+    save(key, base) { write(KEY_STORE, key); write(BASE_STORE, base); },
+    clear() { write(KEY_STORE, ''); write(BASE_STORE, ''); },
+    /** 组请求头。没填就一个都不带,服务端走默认配置 */
+    headers() {
+      const h = {};
+      const k = read(KEY_STORE), b = read(BASE_STORE);
+      if (k) h['X-Studyomni-Key'] = k;
+      if (b) h['X-Studyomni-Base'] = b;
+      return h;
+    }
+  };
+})();
+
 /* 探测后端。GET /api/chat 是 chat.js 提供的自检接口 */
 async function probeBackend() {
   if (AI.backendOK !== null) return AI.backendOK;
@@ -5111,7 +5226,8 @@ async function probeBackend() {
     const res = await fetch('/api/chat', { method: 'GET' });
     if (!res.ok) { AI.backendOK = false; return false; }
     const info = await res.json();
-    AI.backendOK = !!(info && info.ok && info.keyConfigured);
+    // 服务端没配密钥不代表不能用 —— 用户可能自己填了一个
+    AI.backendOK = !!(info && info.ok && (info.keyConfigured || UserAPI.active()));
   } catch (e) {
     AI.backendOK = false;   // file:// 或纯静态托管都会落到这里
   }
@@ -5157,7 +5273,8 @@ async function realChat(question) {
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // 用户自带密钥时由这里带上;没填则只有 Content-Type,走服务端配置
+      headers: Object.assign({ 'Content-Type': 'application/json' }, UserAPI.headers()),
       body: JSON.stringify(payload),
     });
 
@@ -6028,7 +6145,7 @@ async function parseFile(file, item) {
     setFileMeta(item, 'AI 解析中...', false);
     const res = await fetch('/api/parse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, UserAPI.headers()),
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(await readError(res));
@@ -6142,7 +6259,9 @@ function syncFavoriteBtn() {
   const btn = document.getElementById('btnFavorite');
   if (!btn) return;
   const on = isFavorited();
-  btn.textContent = on ? '✅ 已收藏' : '📌 收藏题目';
+  // 用 innerHTML 而不是 textContent:图标要包在 .btn-i 里,窄屏才有得藏
+  btn.innerHTML = '<span class="btn-i" aria-hidden="true">' + (on ? '✅' : '📌') + '</span>'
+    + (on ? '已收藏' : '收藏题目');
   btn.classList.toggle('is-on', on);
 }
 function toggleFavorite() {
@@ -7084,6 +7203,76 @@ const Settings = (function () {
     });
   }
 
+  /* ---- 自定义 API(BYOK) ----
+     密钥不进 state,所以这里直接读写那两个独立的 localStorage 键。
+     前端只做"形态检查"给即时反馈;真正的管束在服务端(resolveUserEndpoint),
+     那边拒绝的地址会静默回落到默认端点。 */
+  function bindUserAPI() {
+    const keyEl = document.getElementById('apiKeyInput');
+    const baseEl = document.getElementById('apiBaseInput');
+    const descEl = document.getElementById('apiModeDesc');
+    const tipEl = document.getElementById('apiState');
+    if (!keyEl || !baseEl) return;
+
+    /* 只填域名时补上对话路径 —— 否则会把请求 POST 到站点根路径拿 404 */
+    const DEFAULT_PATH = '/chat/completions';
+
+    function normBase(raw) {
+      if (!raw) return { ok: true, value: '' };
+      let u;
+      try { u = new URL(raw); } catch { return { ok: false, why: 'API 地址格式不对' }; }
+      if (u.protocol !== 'https:') return { ok: false, why: 'API 地址必须是 https' };
+      if (u.username || u.password) return { ok: false, why: 'API 地址不能带账号密码' };
+      if (u.search || u.hash) return { ok: false, why: 'API 地址不能带查询串' };
+      if (!u.pathname || u.pathname === '/') u.pathname = DEFAULT_PATH;
+      return { ok: true, value: u.toString().replace(/\/+$/, '') };
+    }
+
+    function refresh(saved) {
+      const has = UserAPI.active();
+      keyEl.value = UserAPI.key();
+      baseEl.value = UserAPI.base();
+      if (descEl) {
+        descEl.textContent = has
+          ? (UserAPI.base() ? '使用你填写的密钥与 API 地址' : '使用你填写的密钥(地址仍是官方)')
+          : '当前使用服务端配置的密钥';
+      }
+      if (tipEl) {
+        tipEl.textContent = saved || (has ? '已生效' : '');
+        tipEl.hidden = !tipEl.textContent;
+      }
+    }
+
+    function save() {
+      const b = normBase(baseEl.value.trim());
+      if (!b.ok) { toast(b.why); return; }
+      const k = keyEl.value.trim();
+      UserAPI.save(k, b.value);
+      baseEl.value = b.value;
+      AI.backendOK = null;      // 探测结论作废,下次请求重新判断
+      refresh('已保存');
+      toast(k ? '已启用自定义 API' : '已恢复默认 API');
+    }
+
+    function reset() {
+      keyEl.value = '';
+      baseEl.value = '';
+      UserAPI.clear();
+      AI.backendOK = null;
+      refresh('已恢复默认');
+      toast('已恢复默认 API');
+    }
+
+    const onEnter = e => { if (e.key === 'Enter') { e.preventDefault(); save(); } };
+    keyEl.addEventListener('keydown', onEnter);
+    baseEl.addEventListener('keydown', onEnter);
+    const saveBtn = document.getElementById('apiSave');
+    if (saveBtn) saveBtn.addEventListener('click', save);
+    const resetBtn = document.getElementById('apiReset');
+    if (resetBtn) resetBtn.addEventListener('click', reset);
+    refresh('');
+  }
+
   function getState() { return Object.assign({}, state, { theme: theme }); }
 
   function repaintRanges() {
@@ -7175,6 +7364,7 @@ const Settings = (function () {
     bindSwitch('swCropPrompt', 'cropPrompt');
     bindSwitch('swLatex', 'latex');
     bindSwatches('swatchBrand', 'brand');
+    bindUserAPI();
 
     // 跟随系统主题变化(仅 auto 模式生效)
     if (window.matchMedia) {

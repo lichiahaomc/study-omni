@@ -11,6 +11,7 @@
 
 import {
   json, clamp, resolveModel, resolveMaxTokens, callUpstream, readText, PROVIDER,
+  resolveUserKey, resolveUserEndpoint,
 } from '../_lib/providers.js';
 import { buildSystemPrompt } from '../_lib/prompts.js';
 import { checkRateLimit, tooManyResponse, sameOrigin } from '../_lib/ratelimit.js';
@@ -64,8 +65,17 @@ export async function onRequestPost({ request, env }) {
     return json({ error: '请求体不是合法 JSON' }, 400);
   }
 
-  const apiKey = env[PROVIDER.keyEnv];
-  if (!apiKey) return json({ error: `服务端未配置 ${PROVIDER.keyEnv}` }, 500);
+  // 与 chat.js 一致:允许用户带自己的密钥/地址(BYOK),都过同一套校验。
+  // 校验不通过就静默回落到服务端配置,不报错。
+  const userKey = resolveUserKey(request.headers.get('X-Studyomni-Key'));
+  const userEndpoint = resolveUserEndpoint(request.headers.get('X-Studyomni-Base'));
+  const apiKey = userKey || env[PROVIDER.keyEnv];
+  if (!apiKey) {
+    return json({
+      error: `服务端未配置 ${PROVIDER.keyEnv},也没有填自定义 API`,
+      hint: '可以点右上角齿轮 → 「自定义 API」填入你自己的密钥',
+    }, 500);
+  }
 
   /* 识图固定走支持视觉的那个模型,与用户选的档位无关 ——
      实测把图片喂给 deepseek-v4-pro 会空转到 finish_reason=length,
@@ -130,6 +140,7 @@ export async function onRequestPost({ request, env }) {
   try {
     upstream = await callUpstream({
       apiKey,
+      endpoint: userEndpoint || undefined,
       payload: {
         model: visionModel,
         messages,
