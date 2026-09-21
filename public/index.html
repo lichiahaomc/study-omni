@@ -2563,6 +2563,131 @@
     color: var(--text-secondary);
   }
 
+  /* ===== 图片裁剪(框选题目) =====
+     遮罩用「选框自带超大 box-shadow + 舞台 overflow:hidden」实现 ——
+     比铺四块 div 省事,而且移动/缩放时不用同步四个遮罩块的位置。 */
+  .modal-wide { width: min(860px, 100%); }
+  .crop-head-left { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .crop-step {
+    font-size: calc(11.5px * var(--font-scale, 1));
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+  /* 四层结构,别合并:
+     .crop-frame    纯留白(14px),给手柄留出溢出的余地
+     .crop-stage    定位基准 + 与图片等大,**不能有 padding**
+     .crop-viewport 与图片等大 + overflow:hidden —— 只用来裁掉选框那个
+                    9999px 的大阴影,绝不能把手柄一起裁了
+     .crop-handles  独立一层,跟着选框走但不受裁剪 —— 否则「全选」或贴边框选时
+                    八个手柄会被视口砍掉一半
+
+     ⚠️ stage 上**不能**用 padding 来留白:绝对定位的包含块是「内边距盒」,
+     而它的原点是**边框内缘**(不是内容起点),所以 left:0 并不等于图片左边 ——
+     给 stage 加 14px padding 会让手柄整体偏移 14px(踩过)。留白必须由外层承担。 */
+  .crop-frame { padding: 14px; }
+  .crop-stage {
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+    touch-action: none;          /* 手机上自己处理手势,别让页面跟着滚 */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: crosshair;
+  }
+  .crop-viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #0b1220;         /* 图片解码出来之前的底色 */
+  }
+  .crop-viewport img {
+    display: block;
+    width: 100%; height: 100%;
+    pointer-events: none;        /* 事件统一由 stage 接,省得算子元素 */
+    -webkit-user-drag: none;
+  }
+  /* ⚠️ 手柄层本身必须 pointer-events:none —— 它跟选框等大,
+     虽然透明但仍是个命中目标,会把框内的点击截走,
+     导致「框内拖动 = 移动」被判成「画新框」。只有圆点自己可点。 */
+  .crop-handles { position: absolute; pointer-events: none; }
+  .crop-h { pointer-events: auto; }
+  /* 还没框选时:整张压暗 + 居中一行引导语。
+     刻意**不**默认选中整张 —— 那样选框铺满图片,用户往里拖只会「移动」它,
+     永远画不出新框,而「拖出一个框」正是这个功能的主操作。 */
+  .crop-stage.is-empty .crop-viewport::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(8, 11, 20, .5);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .crop-hint {
+    position: absolute; inset: 0;
+    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 18px;
+    text-align: center;
+    color: #fff;
+    font-size: calc(13px * var(--font-scale, 1));
+    font-weight: 600;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+    pointer-events: none;
+  }
+  .crop-stage:not(.is-empty) .crop-hint { display: none; }
+  .crop-box {
+    position: absolute;
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow: 0 0 0 9999px rgba(8, 11, 20, .58);
+    cursor: move;
+  }
+  /* ⚠️ 未框选时必须把选框和手柄整个藏起来。只加 is-empty 变暗是不够的 ——
+     这些元素是复用的,里面还留着**上一张图**的 left/top/width/height:
+     既会显示成一个幽灵框,又会让「往里拖」被判成移动而不是画新框。 */
+  .crop-stage.is-empty .crop-box,
+  .crop-stage.is-empty .crop-handles { display: none; }
+  /* 三分线:一格 33.333%,线画在格子起点。
+     白线 + 紧邻 1px 黑线「双色描边」—— 单用白线在浅色试卷/课本上会看不见,
+     单用黑线在深色照片上又会看不见。 */
+  .crop-box::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right,  rgba(255, 255, 255, .5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, .5) 1px, transparent 1px),
+      linear-gradient(to right,  rgba(0, 0, 0, .3) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, .3) 1px, transparent 1px);
+    background-size: 33.3333% 33.3333%;
+    background-position: 0 0, 0 0, 1px 0, 0 1px;
+    pointer-events: none;
+  }
+  /* 八个手柄,四角 + 四边。
+     ⚠️ 偏移要用 -12.5px 而不是 -11px:绝对定位子元素的包含块是**内边距盒**,
+     会被 1.5px 的边框往里缩,按 -11px 放的话手柄圆点会偏进角内约 1.5px,
+     拖角时的落点也跟着差几像素。 */
+  .crop-h { position: absolute; width: 22px; height: 22px; }
+  .crop-h::after {
+    content: '';
+    position: absolute; inset: 5px;
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+  }
+  .crop-h[data-h="nw"] { left: -12.5px; top: -12.5px;    cursor: nwse-resize; }
+  .crop-h[data-h="n"]  { left: 50%;   top: -12.5px;    margin-left: -12.5px; cursor: ns-resize; }
+  .crop-h[data-h="ne"] { right: -12.5px; top: -12.5px;   cursor: nesw-resize; }
+  .crop-h[data-h="e"]  { right: -12.5px; top: 50%;     margin-top: -12.5px;  cursor: ew-resize; }
+  .crop-h[data-h="se"] { right: -12.5px; bottom: -12.5px; cursor: nwse-resize; }
+  .crop-h[data-h="s"]  { left: 50%;   bottom: -12.5px; margin-left: -12.5px; cursor: ns-resize; }
+  .crop-h[data-h="sw"] { left: -12.5px; bottom: -12.5px; cursor: nesw-resize; }
+  .crop-h[data-h="w"]  { left: -12.5px; top: 50%;      margin-top: -12.5px;  cursor: ew-resize; }
+
+  .crop-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: calc(12px * var(--font-scale, 1));
+    color: var(--text-secondary);
+  }
+  .crop-bar .crop-size b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
+
 
   /* ---- 分段控件 ---- */
   .seg {
@@ -4084,6 +4209,16 @@
 
         <div class="settings-row">
           <div class="settings-label">
+            <span class="settings-label-main">上传图片时先裁剪</span>
+            <span class="settings-label-desc">弹出框选窗口,只把选中的部分发给模型</span>
+          </div>
+          <button type="button" class="switch" id="swCropPrompt" role="switch" aria-checked="true" aria-label="上传图片时先裁剪">
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-label">
             <span class="settings-label-main">公式使用 LaTeX 渲染</span>
             <span class="settings-label-desc">关闭后公式以纯文本显示,便于复制</span>
           </div>
@@ -4218,6 +4353,56 @@
     <div class="modal-foot">
       <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
       <button type="button" class="btn-mini" id="bgApply" disabled>应用</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 弹窗:裁剪图片(框选题目) =====
+     选好图片后自动弹出,框完再上传。只在「原图上传」之外还提供这个选择,
+     不强制 —— 干净的截图可以直接原图上传。 -->
+<div class="modal-layer" id="cropLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="cropTitle" tabindex="-1" id="cropModal">
+    <div class="modal-head">
+      <div class="crop-head-left">
+        <span class="modal-title" id="cropTitle">框选要用的部分</span>
+        <span class="crop-step" id="cropStep"></span>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="crop-frame">
+        <div class="crop-stage is-empty" id="cropStage">
+          <div class="crop-viewport" id="cropViewport">
+            <img id="cropImg" alt="待裁剪的图片" />
+            <div class="crop-box" id="cropBox"></div>
+          </div>
+          <span class="crop-hint">在图片上拖拽,框出要识别的部分</span>
+          <div class="crop-handles" id="cropHandles">
+            <span class="crop-h" data-h="nw"></span>
+            <span class="crop-h" data-h="n"></span>
+            <span class="crop-h" data-h="ne"></span>
+            <span class="crop-h" data-h="e"></span>
+            <span class="crop-h" data-h="se"></span>
+            <span class="crop-h" data-h="s"></span>
+            <span class="crop-h" data-h="sw"></span>
+            <span class="crop-h" data-h="w"></span>
+          </div>
+        </div>
+      </div>
+      <div class="crop-bar">
+        <span class="crop-size" id="cropSize">—</span>
+        <button type="button" class="btn-mini btn-mini-ghost" id="cropAll">全选</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" data-modal-close>取消</button>
+      <button type="button" class="btn-mini btn-mini-ghost" id="cropOriginal">原图上传</button>
+      <button type="button" class="btn-mini" id="cropApply">确定</button>
     </div>
   </div>
 </div>
@@ -5153,7 +5338,304 @@ function looksScanned(r) {
   return r.chars / Math.max(1, r.readPages) < SCAN_CHARS_PER_PAGE;
 }
 
+/* 屏幕上的选区 → 源图像素矩形(带夹取)。
+   抽成顶层纯函数是为了能在 Node 里单测 —— 这段映射一旦算错,
+   裁出来的图就会整体偏移、或者右边多出半条边。
+   `sel` 是相对图片左上角的显示坐标,`dispW` 是图片在屏幕上的宽度。 */
+function cropRectOf(sel, dispW, natW, natH) {
+  const k = natW / Math.max(1, dispW);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // 起点和终点**各自**换算完再相减,而不是分别取整起点与尺寸 ——
+  // 后者两边各舍一次,合起来会凭空少掉 1px(用户框到哪儿就该裁到哪儿)。
+  // 顺序也有讲究:先把起点夹进 [0, natW-1],终点再夹到 [起点+1, natW],
+  // 这样宽高天然 ≥1、右边界也绝不会越出源图。
+  const sx = clamp(Math.round(sel.x * k), 0, Math.max(0, natW - 1));
+  const ex = clamp(Math.round((sel.x + sel.w) * k), sx + 1, natW);
+  const sy = clamp(Math.round(sel.y * k), 0, Math.max(0, natH - 1));
+  const ey = clamp(Math.round((sel.y + sel.h) * k), sy + 1, natH);
+  return { sx: sx, sy: sy, sw: ex - sx, sh: ey - sy };
+}
+
+/* ==================== 图片裁剪(框选题目) ====================
+   选好图片后弹窗让用户框出要用的部分,确定后只把裁剪结果往下传。
+   非图片(如 PDF)原样跳过;多张图排成队逐张处理,一次只弹一个窗口。
+
+   `run(list)` 返回处理后的文件列表,交给真正入库的 commitFiles。
+   三态:确定(用裁剪结果) / 原图上传(不裁) / 取消(这张及之后都不要)。 */
+(function () {
+  const layer = document.getElementById('cropLayer');
+  const stage = document.getElementById('cropStage');
+  const viewport = document.getElementById('cropViewport');
+  const handlesEl = document.getElementById('cropHandles');
+  const imgEl = document.getElementById('cropImg');
+  const boxEl = document.getElementById('cropBox');
+  const sizeEl = document.getElementById('cropSize');
+  const stepEl = document.getElementById('cropStep');
+  if (!layer || !stage || !viewport) return;
+
+  const MIN = 20;        // 选框最小边长(显示像素),太小了没法拖
+  const MAX_OUT = 2400;  // 出图的最长边上限,再大也是白发
+
+  let dispW = 0, dispH = 0;    // 图片在屏幕上的尺寸
+  let natW = 0, natH = 0;      // 原图尺寸
+  let sel = null;              // null = 还没框选
+  let drag = null;
+  let settle = null;           // 当前这一张的 resolve
+
+  const isImage = f => (f.type || '').startsWith('image/');
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const hasSel = () => !!sel && sel.w >= MIN && sel.h >= MIN;
+
+  function paint() {
+    stage.classList.toggle('is-empty', !sel);
+    if (!sel) {
+      if (sizeEl) sizeEl.innerHTML = '尚未框选 · 原图 ' + natW + ' × ' + natH + ' px';
+      return;
+    }
+    // 选框与手柄层几何完全相同,只是所在的层不同(一个被视口裁剪、一个不被裁)。
+    // 两者都在各自的包含块里按「padding box」定位 —— viewport 没有内边距、
+    // stage 的 14px 内边距正好被绝对定位抵消,所以可以用同一组数值。
+    [boxEl, handlesEl].forEach(el => {
+      if (!el) return;
+      el.style.left = sel.x + 'px';
+      el.style.top = sel.y + 'px';
+      el.style.width = sel.w + 'px';
+      el.style.height = sel.h + 'px';
+    });
+    // 报的是「源图像素」而不是屏幕像素 —— 用户关心的是裁出来多大
+    const k = natW / Math.max(1, dispW);
+    if (sizeEl) {
+      sizeEl.innerHTML = '选区 <b>' + Math.round(sel.w * k) + ' × ' + Math.round(sel.h * k)
+        + '</b> px(原图 ' + natW + ' × ' + natH + ')';
+    }
+  }
+
+  function selectAll() {
+    sel = { x: 0, y: 0, w: dispW, h: dispH };
+    paint();
+  }
+
+  /* 把图片按可用空间等比铺进舞台。小图允许放大一点(最多 2 倍),
+     否则在手机上一张 200px 的图根本没法框。 */
+  function layout() {
+    const pad = 44;
+    const maxW = Math.min(820, window.innerWidth - pad * 2);
+    const maxH = Math.max(180, window.innerHeight - 300);
+    const k = Math.min(maxW / natW, maxH / natH, 2);
+    dispW = Math.max(1, Math.round(natW * k));
+    dispH = Math.max(1, Math.round(natH * k));
+    // 尺寸给到 viewport(stage 靠 padding 自动撑大)
+    viewport.style.width = dispW + 'px';
+    viewport.style.height = dispH + 'px';
+    // 弹窗宽度跟着图片走 —— 竖长的题目页配一个宽弹窗,两侧会空出一大片灰
+    const modalEl = document.getElementById('cropModal');
+    if (modalEl) {
+      const want = Math.max(380, Math.min(860, dispW + 38));   // 38 = 正文左右内边距 + 边框
+      modalEl.style.width = 'min(' + want + 'px, 100%)';
+    }
+  }
+
+  /* ---- 指针交互:空白处拖=新画,框内拖=移动,手柄拖=缩放 ---- */
+  // 一律以 viewport(= 图片区域)为原点算,不是 stage —— stage 外面还包了 14px 内边距
+  function local(e) {
+    const r = viewport.getBoundingClientRect();
+    return { x: clamp(e.clientX - r.left, 0, dispW), y: clamp(e.clientY - r.top, 0, dispH) };
+  }
+
+  stage.addEventListener('pointerdown', e => {
+    if (!settle) return;                 // 没在等结果就别接事件
+    const p = local(e);
+    const handle = e.target.closest('.crop-h');
+    if (handle) {
+      drag = { mode: 'resize', h: handle.dataset.h, sx: p.x, sy: p.y, from: Object.assign({}, sel) };
+    } else if (e.target.closest('.crop-box')) {
+      drag = { mode: 'move', sx: p.x, sy: p.y, from: Object.assign({}, sel) };
+    } else {
+      drag = { mode: 'draw', sx: p.x, sy: p.y };
+      sel = { x: p.x, y: p.y, w: 0, h: 0 };
+      paint();
+    }
+    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const p = local(e);
+    if (drag.mode === 'draw') {
+      sel.x = Math.min(drag.sx, p.x);
+      sel.y = Math.min(drag.sy, p.y);
+      sel.w = Math.abs(p.x - drag.sx);
+      sel.h = Math.abs(p.y - drag.sy);
+    } else if (drag.mode === 'move') {
+      sel.x = clamp(drag.from.x + (p.x - drag.sx), 0, dispW - drag.from.w);
+      sel.y = clamp(drag.from.y + (p.y - drag.sy), 0, dispH - drag.from.h);
+    } else {
+      // 缩放:按手柄方向改对应边,再夹住不越界、不小于 MIN
+      const f = drag.from;
+      let l = f.x, t = f.y, r = f.x + f.w, b = f.y + f.h;
+      const h = drag.h;
+      if (h.indexOf('w') >= 0) l = clamp(p.x, 0, r - MIN);
+      if (h.indexOf('e') >= 0) r = clamp(p.x, l + MIN, dispW);
+      if (h.indexOf('n') >= 0) t = clamp(p.y, 0, b - MIN);
+      if (h.indexOf('s') >= 0) b = clamp(p.y, t + MIN, dispH);
+      sel = { x: l, y: t, w: r - l, h: b - t };
+    }
+    paint();
+    e.preventDefault();
+  });
+
+  function endDrag(e) {
+    if (!drag) return;
+    // 只是点了一下没真拖动 → 丢掉,回到「未框选」,免得留个 0 面积的选框
+    const wasDraw = drag.mode === 'draw';
+    drag = null;
+    try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (wasDraw && !hasSel()) sel = null;
+    paint();
+  }
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+
+  const allBtn = document.getElementById('cropAll');
+  if (allBtn) allBtn.addEventListener('click', selectAll);
+
+  /* ---- 出图:屏幕选区 → 原图像素 → canvas → JPEG ---- */
+  function cropToFile(file) {
+    return new Promise((resolve, reject) => {
+      const r = cropRectOf(sel, dispW, natW, natH);
+      const sx = r.sx, sy = r.sy, sw = r.sw, sh = r.sh;
+      const ds = Math.min(1, MAX_OUT / Math.max(sw, sh));
+      const cw = Math.max(1, Math.round(sw * ds));
+      const ch = Math.max(1, Math.round(sh * ds));
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ffffff';          // 透明 PNG 转 JPEG 会变黑,先铺白底
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, cw, ch);
+      cv.toBlob(blob => {
+        if (!blob) return reject(new Error('裁剪失败'));
+        const base = (file.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+        try { resolve(new File([blob], base + '-裁剪.jpg', { type: 'image/jpeg' })); }
+        catch (err) { resolve(blob); }     // 个别浏览器 File 构造受限,退化成 Blob
+      }, 'image/jpeg', 0.92);
+    });
+  }
+
+  function openFor(file, seen, total) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error('读取图片失败'));
+      fr.onload = ev => {
+        const probe = new Image();
+        probe.onerror = () => reject(new Error('图片解码失败'));
+        probe.onload = () => {
+          natW = probe.naturalWidth; natH = probe.naturalHeight;
+          imgEl.src = ev.target.result;
+          layout();
+          sel = null;                   // 每张都从「未框选」开始
+          paint();
+          if (stepEl) stepEl.textContent = total > 1 ? '第 ' + seen + '/' + total + ' 张' : '';
+          settle = resolve;
+          layer.classList.add('open');
+          layer.setAttribute('aria-hidden', 'false');
+          setTimeout(() => { const b = document.getElementById('cropApply'); if (b) b.focus(); }, 60);
+        };
+        probe.src = ev.target.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function finish(action, file) {
+    const r = settle;
+    settle = null;
+    layer.classList.remove('open');
+    layer.setAttribute('aria-hidden', 'true');
+    drag = null;
+    if (r) r(action === 'crop' ? { action: 'crop', file: file } : { action: action, file: file });
+  }
+
+  // 取消 / 点遮罩 / Esc:这一张不要了,后面的也不再问
+  layer.addEventListener('click', e => {
+    if (e.target.closest('[data-modal-close]')) finish('cancel');
+  });
+  layer.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); finish('cancel'); }
+  });
+  let currentFile = null;   // 正在处理的那一张(「确定」时要按它出图)
+
+  const applyBtn = document.getElementById('cropApply');
+  if (applyBtn) applyBtn.addEventListener('click', () => {
+    // 没框选就按原图走 —— 不留「确定没反应」的死角
+    if (!hasSel()) { toast('未框选,已按原图上传'); finish('original'); return; }
+    // 框了整张也等于没裁,别再走一遍 canvas(白损一次画质)
+    const k = natW / Math.max(1, dispW);
+    if (sel.x < 1 && sel.y < 1 && sel.w * k >= natW - 1 && sel.h * k >= natH - 1) {
+      finish('original'); return;
+    }
+    cropToFile(currentFile).then(f => finish('crop', f)).catch(err => {
+      toast('裁剪失败:' + (err && err.message ? err.message : err));
+    });
+  });
+  const origBtn = document.getElementById('cropOriginal');
+  if (origBtn) origBtn.addEventListener('click', () => finish('original'));
+
+  /* ---- 批次处理:串行执行,第二次粘贴/拖拽会排在后面 ---- */
+  let chain = Promise.resolve();
+  function processBatch(list) {
+    const images = list.filter(isImage);
+    if (!images.length) return Promise.resolve(list.slice());
+    const out = [];
+    let seen = 0;
+    return (async () => {
+      for (const f of list) {
+        if (!isImage(f)) { out.push(f); continue; }
+        seen++;
+        currentFile = f;
+        const r = await openFor(f, seen, images.length);
+        if (r.action === 'cancel') break;      // 放弃当前及之后,前面已定的照常返回
+        out.push(r.action === 'crop' ? r.file : f);
+      }
+      return out;
+    })();
+  }
+
+  window.StudyCrop = {
+    isImage: isImage,
+    run: function (list) {
+      const p = chain.then(() => processBatch(list));
+      chain = p.catch(() => {});
+      return p;
+    }
+  };
+})();
+
+/* 入口:先过一遍裁剪弹窗,再把结果交给 commitFiles 入库。
+   没开「上传图片时先裁剪」、整批都不是图片、或裁剪模块没起来,就直接入库。 */
 function handleFiles(files) {
+  const list = Array.from(files);
+  if (!list.length) return;
+  const st = (window.Settings && Settings.getState) ? Settings.getState() : {};
+  const wantsCrop = st.cropPrompt !== false;
+
+  if (!wantsCrop || !window.StudyCrop || !list.some(window.StudyCrop.isImage)) {
+    commitFiles(list);
+    return;
+  }
+  window.StudyCrop.run(list).then(out => {
+    // 用户可能全取消了 —— 那就什么都不加,也不用切栏
+    if (out.length) commitFiles(out);
+  }).catch(err => {
+    // 裁剪链路出任何岔子都不能把文件吞掉,退回原图入库
+    console.warn('[StudyOmni] 裁剪流程异常,改为原图入库:', err);
+    commitFiles(list);
+  });
+}
+
+/* 真正入库:建列表项、出缩略图、按设置触发解析 */
+function commitFiles(files) {
   const list = Array.from(files);
   list.forEach(file => {
     const item = document.createElement('div');
@@ -5903,6 +6385,8 @@ const Settings = (function () {
     temperature: 0.3,
     maxLen: 2048,
     autoParse: true,
+    // 上传图片时是否先弹裁剪窗。关掉后所有图片都按原图上传
+    cropPrompt: true,
     latex: true,
     maxSize: 10,
     col1: 300,
@@ -6004,6 +6488,7 @@ const Settings = (function () {
     setSeg('segMaxSize', String(state.maxSize));
     setSwatch('swatchBrand', state.brand);
     setSwitch('swAutoParse', state.autoParse);
+    setSwitch('swCropPrompt', state.cropPrompt);
     setSwitch('swLatex', state.latex);
     root.setAttribute('data-latex', state.latex ? 'on' : 'off');
 
@@ -6190,6 +6675,7 @@ const Settings = (function () {
     temperature:  v => typeof v === 'number' && v >= 0 && v <= 1,
     maxLen:       v => typeof v === 'number' && v >= 256 && v <= 8192,
     autoParse:    v => typeof v === 'boolean',
+    cropPrompt:   v => typeof v === 'boolean',
     latex:        v => typeof v === 'boolean',
     maxSize:      v => v === 5 || v === 10 || v === 20,
     col1:         v => typeof v === 'number' && v >= 220 && v <= 700,
@@ -6251,6 +6737,7 @@ const Settings = (function () {
     bindRange('temperature', 'temperature', 'tempOut', v => Number(Number(v).toFixed(1)));
     bindRange('maxLen', 'maxLen', 'maxLenOut');
     bindSwitch('swAutoParse', 'autoParse');
+    bindSwitch('swCropPrompt', 'cropPrompt');
     bindSwitch('swLatex', 'latex');
     bindSwatches('swatchBrand', 'brand');
 
