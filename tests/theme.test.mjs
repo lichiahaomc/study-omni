@@ -344,5 +344,56 @@ ok('@supports not 的兜底仍是接近实色(0.94)',
 ok('--glass-blur 仍是 blur(...)', /--glass-blur:\s*blur\(\d+px\)/.test(HTML));
 ok('--glass-blur 带 saturate', /--glass-blur:\s*blur\(\d+px\)\s*saturate\(\d+%\)/.test(HTML));
 
+/* ---------- 演示级功能:示例素材 / 收藏夹 ---------- */
+section('示例素材(现场没素材时的兜底)');
+
+// 硬约束:前端是"零依赖单文件"。示例图必须**现画**,不能多一个静态资源。
+const pubFiles = fs.readdirSync(path.join(process.cwd(), 'public'));
+ok('public/ 里只有 index.html(单文件约束没被破坏)',
+   pubFiles.length === 1 && pubFiles[0] === 'index.html', pubFiles);
+ok('示例图是用 canvas 现画的',
+   /function buildSampleFile\(\)/.test(HTML) &&
+   /createElement\('canvas'\)/.test(HTML.slice(HTML.indexOf('function buildSampleFile'))));
+ok('没有引用外部图片资源', !/<img[^>]+src="(?!data:)[^"]*\.(png|jpe?g|webp)"/i.test(HTML));
+ok('两个入口按钮都在', /id="btnSample"/.test(HTML) && /id="btnSample2"/.test(HTML));
+ok('走的是正常上传链路(含裁剪)',
+   /buildSampleFile\(\)\.then\(f => handleFiles\(\[f\]\)\)/.test(HTML));
+
+section('收藏夹');
+
+ok('查看界面存在',
+   /id="favLayer"/.test(HTML) && /id="favList"/.test(HTML) && /id="btnFavList"/.test(HTML));
+ok('数量角标存在', /id="favBadge"/.test(HTML));
+// ⚠️ 原来去重键是 `学科|内容`,导致从收藏夹载回题目后按钮状态不对、还能重复收藏
+ok('按内容去重(不用 学科|内容 做键)', /function favIndexOf\(list, content\)/.test(HTML));
+ok('已经没有代码依赖 f.key', !/\bf\.key\b/.test(HTML));
+ok('载回中栏走 renderResult', /function loadFavorite\(f\)[\s\S]{0,500}?renderResult\(/.test(HTML));
+ok('开合函数在顶层(loadFavorite 要调 closeFav)', /^function closeFav\(\)/m.test(HTML));
+ok('列表项用下标而非 key 做标识', /data-i="\$\{i\}"/.test(HTML));
+ok('清空前有确认', /confirm\('确定清空全部收藏/.test(HTML));
+
+section('长内容的布局护栏');
+
+// ⚠️ 气泡是 flex 子项,默认 min-width:auto 意味着"撑得住就不缩",
+// 长公式会直接把气泡撑破父容器 → 整列横向溢出、回答右侧被裁。
+// 有 min-width:0 之后,.katex-display 的 max-width:100% 才真正生效。
+ok('.bubble 显式设了 min-width: 0',
+   /\.bubble \{[\s\S]{0,500}?min-width:\s*0/.test(HTML));
+ok('公式仍有横向滚动兜底',
+   /\.math-node \.katex-display \{[\s\S]{0,200}?overflow-x:\s*auto/.test(HTML));
+
+section('README');
+
+const README = fs.readFileSync(path.join(process.cwd(), 'README.md'), 'utf8');
+const imgs = [...README.matchAll(/docs\/([\w.-]+\.(?:png|jpe?g|webp))/g)].map(m => m[1]);
+ok('README 里引用了截图', imgs.length > 0, imgs.length);
+imgs.forEach(f => {
+  ok('README 引用的 docs/' + f + ' 确实存在',
+     fs.existsSync(path.join(process.cwd(), 'docs', f)));
+});
+// 图得进仓库才看得到 —— 之前开发截图全被 .gitignore 挡着,README 一张图都没有
+ok('docs/ 没被 .gitignore 挡掉',
+   !/^\s*docs\//m.test(fs.readFileSync(path.join(process.cwd(), '.gitignore'), 'utf8')));
+
 console.log('\n========== ' + (pass + fail) + ' 项:' + pass + ' PASS / ' + fail + ' FAIL ==========');
 process.exit(fail ? 1 : 0);

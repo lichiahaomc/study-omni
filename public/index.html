@@ -1138,6 +1138,32 @@
     margin-bottom: 6px;
   }
   .empty-state p { font-size: calc(12px * var(--font-scale, 1)); line-height: 1.7; }
+  .empty-state .empty-sample { margin-top: 16px; }
+
+  /* 上传栏底部的「载入示例」入口。虚线框是为了跟上面的上传区区分开:
+     它是"没东西可用时的兜底",不是主入口 */
+  .sample-btn {
+    appearance: none;
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm, 12px);
+    border: 1px dashed var(--border-strong);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: calc(12.5px * var(--font-scale, 1));
+    transition: border-color var(--dur) var(--ease-out),
+                background var(--dur) var(--ease-out),
+                color var(--dur) var(--ease-out);
+  }
+  .sample-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), .07);
+  }
+  .sample-btn:disabled { opacity: .5; cursor: default; }
+  [data-theme="dark"] .sample-btn { border-color: rgba(255, 255, 255, .22); }
+  [data-theme="dark"] .sample-btn:hover { border-color: var(--primary); }
 
   .result-content { display: none; }
   .result-content.active { display: block; animation: fadeIn .35s ease; }
@@ -1401,6 +1427,12 @@
     font-size: calc(14px * var(--font-scale, 1));
     line-height: 1.72;
     word-wrap: break-word;
+    /* ⚠️ 必须显式给 min-width:0。气泡是 flex 子项,默认 min-width:auto
+       意味着"不能缩到比内容还窄" —— 遇到长公式这种不可折行的内容时,
+       气泡会直接撑破父容器、把整列顶出横向溢出(表现:回答右侧文字被裁)。
+       有了它,`.katex-display` 的 max-width:100% + overflow-x:auto
+       才有意义 —— 否则那个 100% 等于"被撑宽之后的自己",永远不触发。 */
+    min-width: 0;
     transition: transform var(--dur-slow) var(--ease-out),
                 box-shadow var(--dur-slow) var(--ease-out);
   }
@@ -2693,6 +2725,73 @@
   }
   .crop-bar .crop-size b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
 
+  /* ===== 收藏夹 ===== */
+  .fav-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), .18);
+    color: var(--primary);
+    font-size: calc(11px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+    line-height: 1.6;
+  }
+  [data-theme="dark"] .fav-badge { background: rgba(var(--primary-rgb), .3); color: var(--primary-tint); }
+  #favModal .modal-foot { justify-content: space-between; }
+  .fav-list { display: flex; flex-direction: column; gap: 9px; }
+  .fav-item {
+    position: relative;
+    padding: 11px 38px 11px 13px;
+    border-radius: var(--radius-sm, 12px);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .5);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  }
+  .fav-item:hover { border-color: rgba(var(--primary-rgb), .5); background: rgba(var(--primary-rgb), .07); }
+  [data-theme="dark"] .fav-item { background: rgba(148, 163, 184, .1); }
+  .fav-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .fav-subject {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), .14);
+    color: var(--primary);
+    font-size: calc(11px * var(--font-scale, 1));
+    font-weight: var(--fw-semibold);
+  }
+  [data-theme="dark"] .fav-subject { color: var(--primary-tint); }
+  .fav-time { font-size: calc(11px * var(--font-scale, 1)); color: var(--text-tertiary); }
+  /* 长内容只露两行 —— 收藏夹是"找回"用的,不是阅读界面 */
+  .fav-text {
+    font-size: calc(12.5px * var(--font-scale, 1));
+    color: var(--text-secondary);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .fav-del {
+    position: absolute;
+    top: 9px; right: 9px;
+    width: 22px; height: 22px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: calc(12px * var(--font-scale, 1));
+    line-height: 1;
+    transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+  .fav-del:hover { background: rgba(244, 63, 94, .14); color: var(--danger); }
+  .fav-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: calc(12.5px * var(--font-scale, 1));
+    line-height: 1.8;
+  }
+
 
   /* ---- 分段控件 ---- */
   .seg {
@@ -3901,6 +4000,11 @@
           <input type="file" id="fileInput" hidden multiple accept="image/*,.pdf" />
         </div>
 
+        <!-- 演示用:现场没素材时一键塞进一道题,整条链路(裁剪→识别→答疑)跑一遍 -->
+        <button type="button" class="sample-btn" id="btnSample">
+          <span aria-hidden="true">✨</span> 没有现成素材?载入一道示例题
+        </button>
+
         <div class="file-list" id="fileList"></div>
 
         <div class="upload-tips">
@@ -3933,6 +4037,7 @@
           </svg>
           <h4>等待解析素材</h4>
           <p>上传题目图片后,识别结果将在这里展示</p>
+          <button type="button" class="btn-mini empty-sample" id="btnSample2">载入一道示例题</button>
         </div>
 
         <!-- Result content —— 初始不带 active,由 renderResult() 在解析完成后打开 -->
@@ -3941,6 +4046,7 @@
 
       <div class="action-bar">
         <button class="btn" id="btnFavorite">📌 收藏题目</button>
+        <button class="btn" id="btnFavList">📚 收藏夹<span class="fav-badge" id="favBadge" hidden>0</span></button>
         <button class="btn" id="btnShare">📤 分享</button>
         <span class="spacer"></span>
         <button class="btn btn-primary" id="btnAsk">
@@ -4412,6 +4518,30 @@
   </div>
 </div>
 
+
+<!-- ===== 弹窗:收藏夹 =====
+     收藏的数据一直是真存下来的,但之前没有查看的地方 ——
+     点了只弹一句"已收藏(共 N 题)",看着像个半截功能。 -->
+<div class="modal-layer" id="favLayer" aria-hidden="true">
+  <div class="modal-scrim" data-modal-close></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="favTitle" tabindex="-1" id="favModal">
+    <div class="modal-head">
+      <span class="modal-title" id="favTitle">收藏夹</span>
+      <button class="icon-btn" type="button" data-modal-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fav-list" id="favList"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-mini btn-mini-ghost" id="favClear">清空全部</button>
+      <button type="button" class="btn-mini" data-modal-close>关闭</button>
+    </div>
+  </div>
+</div>
 
 <!-- 轻量提示条:栏宽恢复、设置导出等操作的即时反馈 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -5224,6 +5354,99 @@ uploadZone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', e => handleFiles(e.target.files));
 
+/* ---- 演示用示例素材 ----
+   现场可能没有现成的题目图片(演示机不是自己的、桌面没素材)。
+   这里用 canvas **现画**一张整页习题,而不是往仓库里塞一张图 ——
+   项目约束是零依赖单文件,不能多一个静态资源。
+
+   刻意画成**整页**(上方几行正文 + 题目 + 下方几行正文)而不是只有题干:
+   开着「上传图片时先裁剪」时,还能顺带把框选那一步演示出来。 */
+function buildSampleFile() {
+  const W = 760, H = 1040, S = 2;     // 2 倍图,文字才不糊
+  const FONT = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+  return new Promise((resolve, reject) => {
+    const cv = document.createElement('canvas');
+    cv.width = W * S; cv.height = H * S;
+    const x = cv.getContext('2d');
+    x.scale(S, S);
+
+    // 纸张:微暖的米白 + 极淡的横格,像扫描件而不是纯色块
+    x.fillStyle = '#fbfaf6';
+    x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(148, 163, 184, .16)';
+    x.lineWidth = 1;
+    for (let y = 96; y < H - 40; y += 34) {
+      x.beginPath(); x.moveTo(56, y); x.lineTo(W - 56, y); x.stroke();
+    }
+
+    // 页眉
+    x.fillStyle = '#334155';
+    x.font = '600 20px ' + FONT;
+    x.fillText('数学 · 导数及其应用 · 第 3 课时', 56, 58);
+    x.strokeStyle = '#cbd5e1'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(56, 76); x.lineTo(W - 56, 76); x.stroke();
+
+    // 上方正文(噪声:让"框选题目"这一步有意义)
+    x.fillStyle = '#9aa7b8';
+    const noise = [640, 600, 660, 560, 620];
+    noise.forEach((w, i) => x.fillRect(56, 112 + i * 34, w, 9));
+
+    // 题干
+    x.fillStyle = '#1e293b';
+    x.font = '600 21px ' + FONT;
+    x.fillText('例 3', 56, 340);
+    x.font = '21px ' + FONT;
+    const stem = [
+      '已知函数 f(x) = x³ − 3x² + 2。',
+      '(1) 求 f(x) 的单调区间;',
+      '(2) 求 f(x) 在区间 [0, 3] 上的最大值与最小值。'
+    ];
+    stem.forEach((line, i) => x.fillText(line, 124, 340 + i * 40));
+
+    // 题干外面套一个浅色框,像习题册里"例题"的样式,框选时也好认
+    x.strokeStyle = '#e2c98a';
+    x.lineWidth = 2;
+    x.strokeRect(40, 300, W - 80, 176);
+
+    // 下方正文(噪声)
+    x.fillStyle = '#9aa7b8';
+    for (let i = 0; i < 9; i++) {
+      x.fillRect(56, 530 + i * 34, [680, 620, 700, 580, 660, 640, 700, 560, 600][i], 9);
+    }
+
+    // 页码
+    x.fillStyle = '#b6c0cd';
+    x.font = '15px ' + FONT;
+    x.fillText('— 42 —', W / 2 - 22, H - 20);
+
+    cv.toBlob(blob => {
+      if (!blob) { reject(new Error('示例图生成失败')); return; }
+      try { resolve(new File([blob], '示例题目.png', { type: 'image/png' })); }
+      catch (err) { resolve(new File([blob], 'sample.png', { type: 'image/png' })); }
+    }, 'image/png');
+  });
+}
+
+(function bindSample() {
+  let busy = false;
+  function load() {
+    if (busy) return;
+    busy = true;
+    const btns = ['btnSample', 'btnSample2'].map(id => document.getElementById(id));
+    btns.forEach(b => { if (b) b.disabled = true; });
+    buildSampleFile().then(f => handleFiles([f])).catch(err => {
+      toast('示例素材生成失败:' + (err && err.message ? err.message : err));
+    }).then(() => {
+      busy = false;
+      btns.forEach(b => { if (b) b.disabled = false; });
+    });
+  }
+  ['btnSample', 'btnSample2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', load);
+  });
+})();
+
 /* ==================== 素材解析 ==================== */
 
 function setFileMeta(item, text, done) {
@@ -5833,9 +6056,16 @@ function readFavorites() {
     return Array.isArray(arr) ? arr : [];
   } catch (e) { return []; }
 }
+/* 去重键就用内容本身。
+   ⚠️ 原来是 `学科|内容`,结果是:从收藏夹把题目载回中栏时,
+   当前学科跟当初收藏时选的学科对不上 → 按钮明明该显示"已收藏"却显示未收藏,
+   而且再点一下还会存出一条重复。题目内容本身就足以标识一道题。 */
+function favIndexOf(list, content) {
+  return list.findIndex(f => f.content === content);
+}
 function isFavorited() {
-  const key = AI.lastResult && (getSubject() + '|' + AI.lastResult);
-  return !!key && readFavorites().some(f => f.key === key);
+  if (!AI.lastResult) return false;
+  return favIndexOf(readFavorites(), AI.lastResult) >= 0;
 }
 function syncFavoriteBtn() {
   const btn = document.getElementById('btnFavorite');
@@ -5846,20 +6076,142 @@ function syncFavoriteBtn() {
 }
 function toggleFavorite() {
   if (!AI.lastResult) { toast('还没有解析结果可收藏'); return; }
-  const key = getSubject() + '|' + AI.lastResult;
   let list = readFavorites();
-  const at = list.findIndex(f => f.key === key);
+  const at = favIndexOf(list, AI.lastResult);
   if (at >= 0) {
     list.splice(at, 1);
     toast('已取消收藏');
   } else {
-    list.push({ key, subject: getSubject(), content: AI.lastResult, source: AI.lastSource, at: Date.now() });
+    list.push({ subject: getSubject(), content: AI.lastResult, source: AI.lastSource, at: Date.now() });
     list = list.slice(-50);          // 只留最近 50 条,别把 localStorage 撑爆
     toast('已收藏(共 ' + list.length + ' 题)');
   }
-  try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch (e) {}
+  saveFavorites(list);
   syncFavoriteBtn();
+  syncFavBadge();
 }
+
+/* ---- 收藏夹查看界面 ----
+   数据本来就真存着(最多 50 条),之前只是没有地方看 ——
+   点「收藏题目」只弹一句"已收藏(共 N 题)",像个半截功能。
+   这里补上:列表、点一条载回中栏、单条删除、清空。 */
+function saveFavorites(list) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+function fmtFavTime(ts) {
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2, '0');
+  const ymd = (d.getFullYear() === new Date().getFullYear() ? '' : d.getFullYear() + '-')
+    + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  return ymd + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function syncFavBadge() {
+  const badge = document.getElementById('favBadge');
+  if (!badge) return;
+  const n = readFavorites().length;
+  badge.textContent = n;
+  badge.hidden = n === 0;
+}
+
+function renderFavList() {
+  const box = document.getElementById('favList');
+  if (!box) return;
+  const arr = readFavorites();
+  syncFavBadge();
+  if (!arr.length) {
+    box.innerHTML = '<div class="fav-empty">还没有收藏。<br>'
+      + '解析完一道题后点「📌 收藏题目」,就会出现在这里。</div>';
+    return;
+  }
+  // 新的排前面。用**下标**做标识而不是 key —— key 里含任意正文,
+  // 塞进 HTML 属性还得处理引号转义,不划算。
+  box.innerHTML = arr.map((f, i) => ({ f, i })).reverse().map(({ f, i }) => `
+    <div class="fav-item" data-i="${i}" role="button" tabindex="0">
+      <div class="fav-meta">
+        <span class="fav-subject">${escapeHtml(f.subject || '未分类')}</span>
+        <span class="fav-time">${escapeHtml(fmtFavTime(f.at || Date.now()))}</span>
+      </div>
+      <div class="fav-text">${escapeHtml(String(f.content || '').replace(/\s+/g, ' ').slice(0, 120))}</div>
+      <button class="fav-del" data-del="${i}" aria-label="删除这条收藏" title="删除">✕</button>
+    </div>`).join('');
+}
+
+/* 开合放在顶层:loadFavorite 要用 closeFav,
+   写在 initFavList 的闭包里就调不到了(踩过:直接报 ReferenceError) */
+function openFav() {
+  const layer = document.getElementById('favLayer');
+  if (!layer) return;
+  renderFavList();
+  layer.classList.add('open');
+  layer.setAttribute('aria-hidden', 'false');
+  setTimeout(() => { const m = document.getElementById('favModal'); if (m) m.focus(); }, 60);
+}
+function closeFav() {
+  const layer = document.getElementById('favLayer');
+  if (!layer) return;
+  layer.classList.remove('open');
+  layer.setAttribute('aria-hidden', 'true');
+}
+
+/* 把收藏的题目载回中栏,并同步「收藏 / 复制 / 分享」的指向 */
+function loadFavorite(f) {
+  if (!f) return;
+  AI.lastResult = f.content;
+  AI.lastSource = f.source || '收藏夹';
+  AI.lastKind = '收藏';
+  renderResult({ content: f.content, subject: f.subject, source: AI.lastSource, kind: '收藏' });
+  syncFavoriteBtn();
+  closeFav();
+  if (window.StudyTabs && StudyTabs.isCompact() && StudyTabs.isCompact()) StudyTabs.show('result');
+  toast('已载入收藏的题目');
+}
+
+(function initFavList() {
+  const layer = document.getElementById('favLayer');
+  const box = document.getElementById('favList');
+  if (!layer || !box) return;
+
+  layer.addEventListener('click', e => {
+    if (e.target.closest('[data-modal-close]')) { closeFav(); return; }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      e.stopPropagation();
+      const arr = readFavorites();
+      arr.splice(Number(del.dataset.del), 1);
+      saveFavorites(arr);
+      renderFavList();
+      syncFavoriteBtn();
+      toast('已删除');
+      return;
+    }
+    const item = e.target.closest('.fav-item');
+    if (item) loadFavorite(readFavorites()[Number(item.dataset.i)]);
+  });
+  layer.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeFav(); return; }
+    // 列表项是 role=button,要能用键盘打开
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('fav-item')) {
+      e.preventDefault();
+      loadFavorite(readFavorites()[Number(e.target.dataset.i)]);
+    }
+  });
+
+  const btn = document.getElementById('btnFavList');
+  if (btn) btn.addEventListener('click', openFav);
+  const clear = document.getElementById('favClear');
+  if (clear) clear.addEventListener('click', () => {
+    if (!readFavorites().length) { toast('收藏夹已经是空的'); return; }
+    if (!confirm('确定清空全部收藏?此操作不可撤销。')) return;
+    saveFavorites([]);
+    renderFavList();
+    syncFavoriteBtn();
+    toast('收藏夹已清空');
+  });
+
+  syncFavBadge();
+})();
 
 /* 分享:优先用系统分享面板(移动端),桌面上退回复制链接 */
 async function sharePage() {
