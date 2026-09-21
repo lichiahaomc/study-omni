@@ -382,6 +382,27 @@ ok('.bubble 显式设了 min-width: 0',
 ok('公式仍有横向滚动兜底',
    /\.math-node \.katex-display \{[\s\S]{0,200}?overflow-x:\s*auto/.test(HTML));
 
+section('文件目录(TOC)');
+
+// 单文件近 8000 行,靠一份**生成出来**的目录导航。下面几条守的都是踩过的坑。
+const tocOpen = HTML.indexOf('<!-- ▼ 目录');
+const tocClose = HTML.indexOf('▲ 目录结束 ▲ -->');
+ok('目录块存在', tocOpen >= 0 && tocClose > tocOpen);
+// ⚠️ 起始行**不能自带 -->** —— 那样它当场就闭合了,后面的目录行变成裸文本,
+// 被解析器从 <head> 挤进 <body>,于是目录显示在页面上(踩过)
+ok('目录起始行不自带 -->(否则注释当场闭合)',
+   HTML.slice(tocOpen, HTML.indexOf('\n', tocOpen)).indexOf('-->') < 0);
+ok('目录正文里没有注释定界符',
+   !/<!--|-->/.test(HTML.slice(tocOpen + 30, tocClose)));
+// 放 <head> 里,而不是 doctype 之前 —— 后者有触发怪异模式(quirks)的风险
+ok('目录在 <head> 之内、<style> 之前',
+   tocOpen > HTML.indexOf('<head>') && tocOpen < HTML.indexOf('<style>'));
+ok('DOCTYPE 之前没有任何内容',
+   /^\s*<!(?:DOCTYPE|doctype) html>/i.test(HTML));
+ok('npm test 会先校验目录',
+   /"test":\s*"node scripts\/toc\.mjs --check/.test(
+     fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')));
+
 section('README');
 
 const README = fs.readFileSync(path.join(process.cwd(), 'README.md'), 'utf8');
