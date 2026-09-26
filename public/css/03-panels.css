@@ -762,6 +762,59 @@
     margin: 10px 0;
     background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
   }
+  /* ---- markdown 表格 ----
+     模型很喜欢用表格列函数值,中文讲解里也很常见。
+     ⚠️ 外面这层负责**横向滚动**:列多、或者单元格里塞了公式时会超宽,
+        宁可让表格自己滚,也不能把整页撑宽(踩过横向滚动条的坑)。
+        它高度是 auto,所以 overflow-x 把 overflow-y 提升成 auto 也不会裁掉内容。 */
+  .md-table-wrap {
+    margin: 8px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .md-table-wrap::-webkit-scrollbar { height: 6px; }
+  .md-table-wrap::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+  }
+  .md-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* 比正文小一档:表格是密排数字,收一点更容易在窄栏里放下 */
+    font-size: calc(11.5px * var(--font-scale, 1));
+    line-height: 1.6;
+  }
+  /* ⚠️ 这里**故意允许折行**,而且不能写 min-width: max-content。
+     一开始我按"单元格不换行 + 表格至少和内容一样宽"来做,结果窄栏里
+     最后一列直接被推到卡片外面看不见(用户报的"被截了一部分")。
+     表格的正确姿势是**收窄自己**:overflow-wrap: anywhere 让每个单元格的
+     min-content 塌下来,table-layout 就能把整张表压进容器宽度里,
+     放不下时单元格自己换行 —— 各文档渲染器都是这么干的。
+     下面那层滚动容器留着兜底:真遇到断不开的超长内容才会用到。 */
+  .md-table th,
+  .md-table td {
+    padding: 4px 8px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    border: 1px solid var(--border-strong);
+    /* 单元格内容太宽时优先自己换行,而不是把整张表顶宽。
+       12em 是"再宽就该折行"的阈值,不是硬限制。 */
+    max-width: 13em;
+  }
+  .md-table th {
+    font-weight: 700;
+    background: rgba(var(--primary-rgb), .08);
+  }
+  .md-table td { background: rgba(255, 255, 255, .38); }
+  /* 分隔行里的 :--- / ---: / :---: 控制对齐 */
+  .md-table .tl { text-align: left; }
+  .md-table .tc { text-align: center; }
+  .md-table .tr { text-align: right; }
+  .md-table .math-node { display: inline; }
   /* 多行代码块:独立底色 + 横向滚动,长公式不折行 */
   .bubble .code-block {
     margin: 8px 0;

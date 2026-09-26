@@ -112,11 +112,55 @@ function formatText(text) {
     if (dd !== undefined) return stashMath(dd, true);
     if (brack !== undefined) return stashMath(brack, true);
     if (paren !== undefined) return stashMath(paren, false);
-    // $...$ —— 排掉 "$ 100"、空内容、首尾带空格这类跟公式无关的美元符号;
-    // 纯数字($5$、$1,200$)也一律放过,当金额处理
-    if (inline === undefined || !inline.trim() || /^\s|\s$/.test(inline) || /^[\d.,\s]+$/.test(inline)) return whole;
+    // $...$ —— 排掉 "$ 100"、空内容、首尾带空格这类跟公式无关的美元符号。
+    // ⚠️ 以前"纯数字"也一律当金额放过,结果数学讲解里常见的 $0$ / $2$ / $12$
+    //    全成了字面文本 —— 列函数值的表格里尤其刺眼。
+    //    现在只放过**长得像金额**的:带千分位逗号或小数点的($1,200$ / $99.99$)。
+    //    光杆整数按公式处理,KaTeX 渲染出来就是数字本身,视觉上无害。
+    if (inline === undefined || !inline.trim() || /^\s|\s$/.test(inline)
+        || /^[\d\s]*[.,][\d\s.,]*$/.test(inline)) return whole;
     return stashMath(inline, false);
   });
+
+  /* ---- ① 提存:表格 ----
+     ⚠️ 必须在"按空行切段"之前做 —— 否则表格会被拆成好几个段落,
+        渲染出来就是截图里那样:每行一条、管道符原样露着。
+     ⚠️ 收集数据行时**不能看见空行就收工** —— 模型写表格时行间经常夹空行。
+        遇到空行先往后看一行,还是表行就继续。 */
+  const tables = [];
+  out = (function extractTables(src) {
+    const lines = src.split('\n');
+    const isRow = l => /^\s*\|.*\|\s*$/.test(l) && (l.match(/\|/g) || []).length >= 2;
+    // 分隔行:|---|---| / |:--|--:|,由 | - : 空白组成,且至少要有一处连续两个短横。
+    // ⚠️ 别在这里加 `!isRow(l)` 那种排除 —— 分隔行本来就长得像表行,一排就把
+    //    正常表格全拦掉了(踩过:表格一个都识别不出来)。
+    //    它够特殊(只允许 | - : 空白),不会被普通数据行误撞。
+    const isSep = l => /^\s*\|?[\s:|-]+\|?\s*$/.test(l) && /-{2,}/.test(l);
+    const keep = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!isRow(lines[i])) { keep.push(lines[i]); continue; }
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim()) j++;          // 表头与分隔行之间可能夹空行
+      if (j >= lines.length || !isSep(lines[j])) { keep.push(lines[i]); continue; }
+
+      const rows = [lines[i]];
+      let k = j + 1;
+      while (k < lines.length) {
+        if (isRow(lines[k])) { rows.push(lines[k]); k++; continue; }
+        if (!lines[k].trim()) {
+          let m = k + 1;
+          while (m < lines.length && !lines[m].trim()) m++;
+          if (m < lines.length && isRow(lines[m])) { k = m; continue; }
+        }
+        break;
+      }
+      const idx = tables.push(renderTable(rows, lines[j])) - 1;
+      // 前后各留一个空行,保证它独占一段 —— 否则会被包进 <p> 里
+      keep.push('', '\u0000TABLE' + idx + '\u0000', '');
+      i = k - 1;
+    }
+    return keep.join('\n');
+  })(out);
 
   /* ---- ② 转义 ---- */
   out = out.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -147,20 +191,63 @@ function formatText(text) {
   }).join('');
 
   /* ---- ③ 行内语法(此时已全部转义,可安全替换) ---- */
-  out = out
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  out = applyInline(out);
 
   /* ---- ④ 回填 ----
      <pre> / 独立公式都是块级元素,不能包在 <p> 里 —— HTML 解析器遇到
      <p><pre> 会提前闭合 <p>,凭空多出一个空段落。所以先把"整段只有一个
      特殊节点"的 <p> 壳拆掉,再回填内容。 */
-  out = out.replace(/<p class="bubble-p">((?:\u0000(?:BLOCK|ICODE|MATH)\d+\u0000)+)<\/p>/g, '$1');
+  out = out.replace(/<p class="bubble-p">((?:\u0000(?:BLOCK|ICODE|MATH|TABLE)\d+\u0000)+)<\/p>/g, '$1');
+  /* ⚠️ TABLE 必须**排在最前**:表格 HTML 是在①里就拼好的,里面还嵌着
+     MATH / ICODE 的占位符 —— 得先把表格铺开,后面那两条替换才够得着它们。
+     第一版把 TABLE 放在最后,结果单元格里的公式原样漏成了 \u0000MATH0\u0000。 */
   out = out
+    .replace(/\u0000TABLE(\d+)\u0000/g, (_, i) => tables[+i])
     .replace(/\u0000ICODE(\d+)\u0000/g, (_, i) => icodes[+i])
     .replace(/\u0000MATH(\d+)\u0000/g, (_, i) => mathTag(maths[+i]))
     .replace(/\u0000BLOCK(\d+)\u0000/g, (_, i) => blocks[+i]);
   return out;
+}
+
+/* 行内语法:粗体 / 斜体。抽成函数是因为**两处要用** ——
+   正文在 ③ 里跑一遍,表格单元格在①拼 HTML 时就跑过了(它到不了 ③)。
+   写两份迟早只改一处,所以在这里统一。入参必须是**已转义**的文本。 */
+function applyInline(s) {
+  return String(s)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+}
+
+/* 把 markdown 表格渲染成 <table>。
+   两个约束:
+     · 外面套一层可横向滚动的容器 —— 列多的公式表格在窄栏里放不下,
+       宁可让表格自己滚,也不能把整个页面撑宽(踩过横向滚动条的坑)。
+     · 单元格内容此时还**没转义**,所以在这里补齐;
+       公式 / 行内代码的占位符(全是 \u0000+字母数字)不受 escapeHtml 影响,能安全穿过。 */
+function renderTable(rows, sepLine) {
+  const split = row => {
+    let s = row.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    return s.split('|').map(c => c.trim());
+  };
+  // 对齐只看分隔行:`:---` 左、`---:` 右、`:---:` 居中
+  const aligns = split(sepLine).map(c => {
+    const l = c.startsWith(':'), r = c.endsWith(':');
+    return l && r ? 'tc' : r ? 'tr' : l ? 'tl' : '';
+  });
+  const head = split(rows[0]);
+  // 单元格走的是「先转义、再套行内语法」——和正文同样的顺序,
+  // 而且共用 applyInline,规则只有一份。
+  const cell = (tag, txt, i) =>
+    '<' + tag + (aligns[i] ? ' class="' + aligns[i] + '"' : '') + '>'
+    + applyInline(escapeHtml(txt)) + '</' + tag + '>';
+  const thead = '<tr>' + head.map((c, i) => cell('th', c, i)).join('') + '</tr>';
+  const tbody = rows.slice(1)
+    .map(r => { const cs = split(r); return '<tr>' + head.map((_, i) => cell('td', cs[i] ?? '', i)).join('') + '</tr>'; })
+    .join('');
+  return '<div class="md-table-wrap"><table class="md-table"><thead>' + thead
+    + '</thead><tbody>' + tbody + '</tbody></table></div>';
 }
 
 /* 把公式做成占位节点:

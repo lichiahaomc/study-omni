@@ -12,7 +12,7 @@
     "whoami": "wrangler whoami",
     "toc": "node scripts/toc.mjs",
     "split:check": "node scripts/split.mjs --check",
-    "test": "node scripts/toc.mjs --check && node tests/theme.test.mjs && node tests/crop.test.mjs && node tests/providers.test.mjs && node tests/ratelimit.test.mjs && node tests/subjects.test.mjs"
+    "test": "node scripts/toc.mjs --check && node tests/theme.test.mjs && node tests/crop.test.mjs && node tests/providers.test.mjs && node tests/ratelimit.test.mjs && node tests/subjects.test.mjs && node tests/markdown.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

@@ -422,6 +422,13 @@
   [data-theme="dark"] .bubble hr {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent);
   }
+  /* 表格:白底换成半透明白,边框跟着提亮 */
+  [data-theme="dark"] .md-table th,
+  [data-theme="dark"] .md-table td {
+    border-color: rgba(255, 255, 255, .18);
+  }
+  [data-theme="dark"] .md-table th { background: rgba(var(--primary-rgb), .20); }
+  [data-theme="dark"] .md-table td { background: rgba(255, 255, 255, .05); }
   [data-theme="dark"] .message.user .bubble code {
     background: rgba(255, 255, 255, .22);
     color: #fff;
