@@ -469,6 +469,25 @@ ok('02-shell.css 的 html,body 高度规则还在', shell.includes('html, body {
   ok('js/' + x + ' 剥掉注释后仍是合法 JS', !err, err);
 });
 
+section('markdown 表格的样式约定');
+
+/* ⚠️ 断言必须看**剥掉注释后**的 CSS。
+   我自己的注释里就写着 "不能写 min-width: max-content" ——
+   直接 grep 会把这句解释当成真声明,断言当场误报(这个坑今晚踩了三次:
+   toc 索引里的 <script> 字面量、文件头的注释、这次的 CSS 注释)。 */
+const panelsCode = stripCssComments(
+  fs.readFileSync(path.join(PUB_DIR, 'css', '03-panels.css'), 'utf8'));
+
+// 表格必须能**收窄自己**:靠 overflow-wrap: anywhere 让单元格的 min-content 塌下来,
+// 才能被压进窄栏;反过来 min-width: max-content 会禁止收窄 → 宽表往右溢出、最后一列看不见。
+ok('单元格允许折行(overflow-wrap: anywhere)', panelsCode.includes('overflow-wrap: anywhere'));
+ok('表格没有禁止收窄的 min-width: max-content',
+   !/\.md-table\s*\{[^}]*min-width:\s*max-content/.test(panelsCode));
+ok('外面有可横向滚动的兜底容器',
+   /\.md-table-wrap\s*\{[^}]*overflow-x:\s*auto/.test(panelsCode));
+ok('单元格不再使用 nowrap(那会把表格顶宽)',
+   !/\.md-table\s+th[^}]*white-space:\s*nowrap/.test(panelsCode));
+
 section('源码索引');
 
 // 单文件近 8000 行,靠一份**生成出来**的目录导航。下面几条守的都是踩过的坑。
